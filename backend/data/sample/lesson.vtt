@@ -1,0 +1,23 @@
+WEBVTT
+
+00:00:20.000 --> 00:01:15.000
+We will build a retrieval augmented generation system. First, a learner asks a question and the system finds a small set of relevant course passages before asking a language model to write an answer.
+
+00:03:00.000 --> 00:04:05.000
+An embedding represents text as a vector of numbers. Texts with similar meaning should have nearby vectors, which makes it possible to find related passages even when they use different words.
+
+00:07:30.000 --> 00:08:25.000
+Vector search compares the question embedding with stored passage embeddings. A semantic search can find related ideas, but it can miss exact product names or identifiers.
+
+00:12:00.000 --> 00:13:05.000
+Hybrid retrieval combines semantic vector search with keyword search. Keyword search helps with exact terms, while vector search helps with paraphrases. Reciprocal rank fusion combines the ranked lists into one ordering.
+
+00:18:00.000 --> 00:19:05.000
+Reranking takes a larger set of retrieved passages and scores them again against the question. We send only a few high quality passages to the answer model to reduce latency and cost.
+
+00:25:00.000 --> 00:26:05.000
+For timestamp-aware learning, each video passage keeps its start and end times. If the learner is at time T, the database must filter out every transcript chunk whose end time is greater than T before text is placed in the model prompt.
+
+00:33:00.000 --> 00:34:00.000
+The same retrieval system can cite PDF pages and presentation slides. Citations should point to the exact page, slide or video range that supports the answer.
+

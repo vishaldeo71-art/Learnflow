@@ -1,0 +1,12 @@
+# n8n template review and adaptations
+
+The supplied [`N8N-templates`](https://github.com/mhbharat81-sudo/N8N-templates) repo is organized by integration. I reviewed the workflow files below and used their useful ideas without routing learner questions through n8n.
+
+1. **[Upsert huge documents in a vector store with Supabase and Notion](https://github.com/mhbharat81-sudo/N8N-templates/blob/main/Supabase/2568-upsert-huge-documents-in-a-vector-store-with-supabase-and-notion.json)** — it polls changed pages, removes the previous embeddings for the resource, splits content and inserts updated embeddings. Adapted in FastAPI as bounded parser chunks, a shared course/resource ID and replacement-on-re-upload so stale chunks are removed. This project stores its metadata in `resources` and passages in `chunks`.
+2. **[AI-Powered YouTube Video Summarization & Analysis](https://github.com/mhbharat81-sudo/N8N-templates/blob/main/Openai/AI-Powered%20YouTube%20Video%20Summarization%20%26%20Analysis.json)** — it fetches a YouTube transcript and concatenates it for a summary. Adapted as timestamp-preserving VTT/SRT ingestion. The concatenated summary branch is deliberately omitted: it loses the per-segment boundary needed by this challenge. n8n can be used to obtain/transcribe a permitted lecture, format timestamped cues and call `POST /api/v1/courses/{id}/resources`.
+3. **[Resume Screening](https://github.com/mhbharat81-sudo/N8N-templates/blob/main/AI%20ML/resume_screening.json)** — it demonstrates text splitting, embeddings, vector retrieval and short-window conversation memory for a candidate document. Adapted in the mock interview as ephemeral resume/JD text parsing and skill extraction. Candidate data stays out of the course index and no static screening decision is made.
+
+## Optional n8n workflow boundary
+
+n8n is useful for background source triggers (Drive/S3/Notion) and a transcription integration if the team already uses it. After a file is available, send the actual file as multipart `file` to the FastAPI resource endpoint; pass the course ID in the URL. Keep the API bearer token in an n8n credential/environment secret. Do not let an n8n LLM answer learner questions: the backend must receive player time `T`, apply the SQL hard filter, preserve citations and check future-only matches. Do not log resume text, signed file URLs, model keys or answers to a general-purpose workflow log.
+

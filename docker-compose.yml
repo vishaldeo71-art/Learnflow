@@ -1,0 +1,21 @@
+services:
+  api:
+    build:
+      context: ./backend
+    env_file: .env
+    environment:
+      PORT: 8000
+    ports:
+      - "8000:8000"
+  web:
+    build:
+      context: ./frontend
+    env_file: .env
+    environment:
+      BACKEND_API_URL: http://api:8000
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+

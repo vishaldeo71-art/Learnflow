@@ -1,0 +1,33 @@
+{
+  "family": "learnflow-api",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "executionRoleArn": "arn:aws:iam::<ACCOUNT_ID>:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::<ACCOUNT_ID>:role/learnflowApiTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "api",
+      "image": "<ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/learnflow-api:latest",
+      "essential": true,
+      "portMappings": [{"containerPort": 8000, "protocol": "tcp"}],
+      "environment": [
+        {"name": "APP_ENV", "value": "production"},
+        {"name": "LLM_PROVIDER", "value": "bedrock"},
+        {"name": "EMBEDDING_PROVIDER", "value": "bedrock"},
+        {"name": "AWS_REGION", "value": "<REGION>"},
+        {"name": "BEDROCK_MODEL_ID", "value": "anthropic.claude-haiku-4-5-20251001-v1:0"},
+        {"name": "EMBEDDING_MODEL", "value": "amazon.titan-embed-text-v2:0"}
+      ],
+      "secrets": [
+        {"name": "DATABASE_URL", "valueFrom": "arn:aws:secretsmanager:<REGION>:<ACCOUNT_ID>:secret:learnflow/database-url"},
+        {"name": "APP_API_KEY", "valueFrom": "arn:aws:secretsmanager:<REGION>:<ACCOUNT_ID>:secret:learnflow/api-key"}
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {"awslogs-group": "/ecs/learnflow-api", "awslogs-region": "<REGION>", "awslogs-stream-prefix": "api"}
+      }
+    }
+  ]
+}

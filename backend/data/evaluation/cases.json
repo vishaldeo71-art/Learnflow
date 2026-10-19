@@ -1,0 +1,7 @@
+[
+  {"id":"past_supported","category":"grounded_answer","question":"What does vector search compare?","video_time_seconds":600,"expected":"answer_with_video_citation","expected_source_type":"video"},
+  {"id":"future_refusal","category":"timestamp_safety","question":"What does reranking do?","video_time_seconds":300,"expected":"future_content_refusal","expected_source_type":"video"},
+  {"id":"document_supported","category":"document_grounding","question":"Why use hybrid retrieval?","video_time_seconds":0,"expected":"answer_with_document_citation","expected_source_type":"notes"},
+  {"id":"unsupported_refusal","category":"hallucination_control","question":"What is the capital of Antarctica?","video_time_seconds":100,"expected":"unsupported_refusal","expected_source_type":null},
+  {"id":"timestamp_boundary","category":"timestamp_safety","question":"What timestamp filtering rule is taught?","video_time_seconds":1565,"expected":"boundary_chunk_available_only_at_end_time","expected_source_type":"video"}
+]

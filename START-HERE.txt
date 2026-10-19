@@ -1,0 +1,22 @@
+LEARNFLOW — RUN THIS PROJECT ON YOUR COMPUTER
+
+Requirements
+- Docker Desktop installed and running
+- Internet access for the first startup
+
+1. Unzip Learnflow-Local-Share.zip.
+2. Open a terminal in the unzipped Learnflow folder.
+3. Create your local settings file:
+   macOS / Linux:  cp .env.example .env
+   Windows PowerShell:  Copy-Item .env.example .env
+4. Optional: to use Gemini-generated answers, open .env in a text editor,
+   set LLM_PROVIDER=gemini, and put YOUR OWN Gemini API key after GEMINI_API_KEY=.
+   Leave LLM_PROVIDER=mock to run the demo without an API key.
+5. Start Learnflow:
+   docker compose up --build
+6. Open http://localhost:3000 in a browser.
+7. To stop: press Ctrl+C in the terminal, then run:
+   docker compose down
+
+Do not send your .env file or API key to anyone. Every person who wants Gemini
+answers should use their own API key. The mock demo mode requires no key.
