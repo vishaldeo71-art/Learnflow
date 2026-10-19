@@ -72,3 +72,9 @@ Deployment steps:
 ### Automatic caption import
 
 Install the updated backend requirements and apply `backend/migrations/002_course_video.sql` to existing Supabase databases before restarting the API. New setups should apply both migrations in order. Allow at least 120 seconds for the frontend proxy route; the backend import is bounded at 100 seconds. YouTube may deny caption requests from cloud-server IPs, so verify with a captioned video from the deployed environment. A model API key does not unlock unavailable or blocked YouTube captions. The app reports these failures and never falls back to another lesson's resources.
+
+### YouTube caption fallback
+
+The import route first reuses persistent cached captions, then tries public captions. If captions are blocked or unavailable and `GEMINI_API_KEY` is configured, it uses Google's documented YouTube video input to prepare AI video notes for the opening minute. These notes are clearly identified as approximate, not a verbatim transcript. Questions on these lessons analyze at most five minutes ending at the supplied playhead and persist those clip notes. No generated timestamps are trusted: all extracted notes inherit the requested clip's bounds, and retrieval still excludes rows whose end time exceeds the playhead. Summaries cover analyzed clips, not the full video.
+
+Google's YouTube input is a preview feature for public videos. Access, provider quotas, and model availability can still prevent automatic analysis; matching VTT/SRT uploads remain supported. See https://ai.google.dev/gemini-api/docs/video-understanding. Full exact captions can also be imported from a trusted local connection and cached in Supabase when the hosted network is blocked. Batched database inserts support long captioned lessons.

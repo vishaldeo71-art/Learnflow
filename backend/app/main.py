@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
 from .youtube import CaptionError, fetch_captions, video_id_from_url
+from .video_notes import VIDEO_NOTES_DESCRIPTION, MAX_CLIP_SECONDS, generate_video_notes, notes_resource_name, uses_video_notes
 from .config import get_settings
 from .domain import Interview
 from .embeddings import EmbeddingProvider
@@ -235,20 +236,28 @@ async def import_youtube(payload: YouTubeInput, store=Depends(ready_store)):
             async with youtube_import_lock:
                 existing = next((course for course in await store.list_courses() if course.get("video_url") == canonical_url), None)
                 if existing and await store.covered_chunks(existing["id"], 86400, 1):
-                    return {"course": existing, "cached": True, "status": "ready"}
-                imported = await run_in_threadpool(fetch_captions, video_id)
+                    return {"course": existing, "cached": True, "status": "ready", "source": "gemini_video" if uses_video_notes(existing) else "captions"}
+                try:
+                    imported = await run_in_threadpool(fetch_captions, video_id)
+                except CaptionError:
+                    if not settings.gemini_api_key:
+                        raise
+                    imported = await generate_video_notes(canonical_url, 0, 60, settings)
+                video_notes = imported.get("source") == "gemini_video"
+                resource_name = notes_resource_name(0, 60) if video_notes else f"youtube-{video_id}.vtt"
                 # Finish parsing/embedding before publishing a course. Failed fetches leave no course behind.
-                chunks = await make_chunks("", "", f"youtube-{video_id}.vtt", "video", imported["rows"], state.embedder)
-                course = await store.add_course(imported["title"], f"Imported {imported['language']} YouTube captions", canonical_url)
+                chunks = await make_chunks("", "", resource_name, "video", imported["rows"], state.embedder)
+                description = VIDEO_NOTES_DESCRIPTION + ". Only analyzed clips are covered; notes and timing are approximate." if video_notes else f"Imported {imported['language']} YouTube captions"
+                course = await store.add_course(imported["title"], description, canonical_url)
                 for chunk in chunks:
                     chunk.course_id = course["id"]
                 try:
-                    resource = await store.add_resource(course["id"], f"youtube-{video_id}.vtt", "video", chunks)
+                    resource = await store.add_resource(course["id"], resource_name, "video", chunks)
                 except BaseException:
                     # Includes cancellation at the request deadline.
                     await asyncio.shield(store.clear_video_url(course["id"]))
                     raise
-                return {"course": course, "cached": False, "status": "ready", "language": imported["language"], "generated": imported["generated"], "chunk_count": resource["chunk_count"]}
+                return {"course": course, "cached": False, "status": "ready", "source": "gemini_video" if video_notes else "captions", "language": imported["language"], "generated": imported["generated"], "chunk_count": resource["chunk_count"]}
     except CaptionError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except TimeoutError as exc:
@@ -309,6 +318,19 @@ async def ask(payload: AskInput, store=Depends(ready_store)):
         session_id = payload.session_id
     else:
         session_id = (await store.create_session(payload.course_id))["id"]
+    # Analyze a bounded, already-watched clip. Do not pass the full video to the answer model.
+    if uses_video_notes(course) and payload.video_time_seconds > 0:
+        end = payload.video_time_seconds
+        start = max(0, end - MAX_CLIP_SECONDS)
+        name = notes_resource_name(start, end)
+        covered = await store.covered_chunks(payload.course_id, end, 40)
+        if not any(row.get("resource_name") == name for row in covered):
+            try:
+                imported = await generate_video_notes(course["video_url"], start, end, settings)
+                chunks = await make_chunks(payload.course_id, "", name, "video", imported["rows"], state.embedder)
+                await store.add_resource(payload.course_id, name, "video", chunks)
+            except CaptionError as exc:
+                raise HTTPException(status_code=503, detail=str(exc)) from exc
     history = await store.get_messages(session_id, 8)
     action = (payload.action or "answer").lower()
     if action == "answer" and is_overview_question(payload.question):
@@ -336,7 +358,7 @@ async def ask(payload: AskInput, store=Depends(ready_store)):
         answer = "That topic appears later in the lecture and hasn't been covered at your current position yet. I can explain it once you reach that section."
         refusal_reason = "future_video_content"
     elif not matches and course.get("video_url") and payload.video_time_seconds == 0:
-        answer = "The transcript is ready. Play the video first, then ask about the part you have watched."
+        answer = "The video is ready. Play it first, then ask about the part you have watched."
         refusal_reason = "not_started"
     elif not matches:
         answer = "I couldn't find support for that in the available course resources at this point, so I don't want to guess."
@@ -359,6 +381,7 @@ async def ask(payload: AskInput, store=Depends(ready_store)):
             "CONVERSATION HISTORY (short follow-up context only):",
             *[f"{item['role']}: {item['content']}" for item in history],
             f"LEARNER QUESTION: {focus_question}",
+            "AI video notes are approximate and cover only analyzed clips. If notes are used, acknowledge this limitation; a summary is of the analyzed section, not the whole video." if uses_video_notes(course) else "",
             "ALLOWED SOURCES:",
             context_for(matches),
             "Answer only from the allowed source text. If the evidence does not support a claim, say so. Mention source labels [S1], [S2] when useful. Never infer or reveal later-video material.",

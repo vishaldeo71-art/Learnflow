@@ -6,6 +6,11 @@ import LessonPlayer, { LessonPlayerHandle } from "./LessonPlayer";
 import { parseVideoSource } from "../lib/video-source";
 
 type Course = { id: string; title: string; description?: string; video_url?: string | null };
+const hasVideoNotes = (course?: Course) => course?.description?.startsWith("AI video notes · Gemini") ?? false;
+const videoReadyStatus = (course: Course) => hasVideoNotes(course)
+  ? "Video analysis ready. Questions analyze up to five minutes ending at your playhead. AI notes and timings are approximate; summaries cover analyzed sections only."
+  : "Transcript ready. Play the video, then ask about what you have watched.";
+
 type Citation = { label: string; source_type: string; seek_seconds: number | null; resource_name: string };
 type Message = { role: "user" | "assistant"; content: string; citations?: Citation[]; refusal_reason?: string | null };
 type Scorecard = { overall_score: number; dimensions: { name: string; score: number; evidence: string }[]; strengths: string[]; improvement_areas: string[]; recommendations: string[]; method: string };
@@ -87,7 +92,7 @@ export default function Assistant() {
           setVideoUrl(chosen.video_url || "");
           setVideoDraft(chosen.video_url || "");
           setVideoDuration(chosen.video_url ? 0 : 2040);
-          setCaptionStatus(chosen.video_url ? "Transcript ready. Play the video, then ask about what you have watched." : "");
+          setCaptionStatus(chosen.video_url ? videoReadyStatus(chosen) : "");
           await startSession(chosen.id);
         }
       })
@@ -135,7 +140,7 @@ export default function Assistant() {
     setVideoDraft(course?.video_url || "");
     setVideoSeconds(0);
     setVideoDuration(course?.video_url ? 0 : 2040);
-    setCaptionStatus(course?.video_url ? "Transcript ready. Play the video, then ask about what you have watched." : "");
+    setCaptionStatus(course?.video_url ? videoReadyStatus(course) : "");
     setLoading(true);
     try { await startSession(id); }
     catch (error) { setNotice(error instanceof Error ? error.message : "Could not open the lesson."); }
@@ -162,7 +167,7 @@ export default function Assistant() {
     playerRef.current?.seekTo(0);
     setImporting(true);
     setNotice("");
-    setCaptionStatus(source.kind === "youtube" ? "Importing this video's captions…" : "Direct video loaded. Add its transcript below to enable questions.");
+    setCaptionStatus(source.kind === "youtube" ? "Preparing this video: trying captions, then AI video analysis if needed…" : "Direct video loaded. Add its transcript below to enable questions.");
     try {
       const result = source.kind === "youtube"
         ? await api<{ course: Course; cached: boolean; language?: string }>("v1/videos/youtube/import", {
@@ -174,7 +179,7 @@ export default function Assistant() {
       setCourseId(course.id);
       window.localStorage.setItem("learnflow-course", course.id);
       await startSession(course.id);
-      setCaptionStatus(source.kind === "youtube" ? `Transcript ready${result.language ? ` · ${result.language}` : ""}. Play the video, then ask about what you have watched.` : "Upload this video's transcript below. Direct video files do not include captions automatically.");
+      setCaptionStatus(source.kind === "youtube" ? videoReadyStatus(course) : "Upload this video's transcript below. Direct video files do not include captions automatically.");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not import captions. Please retry.";
       setCaptionStatus(message);
@@ -328,8 +333,8 @@ export default function Assistant() {
               <div className="time-display">{timeLabel(videoSeconds)} <span className="time-divider">/</span> {videoDuration ? timeLabel(videoDuration) : "—"}</div>
             </div>
             <div className="timeline-wrap"><input aria-label="Lesson position" type="range" min="0" max={Math.max(videoDuration, videoSeconds, 1)} step="1" disabled={Boolean(videoUrl) && !videoDuration} value={videoSeconds} onChange={(event) => seekTo(Number(event.target.value))} /><div className="timeline-labels"><span>00:00</span><span>{videoUrl ? "Synced with the video player" : "Move the timeline to explore the sample transcript"}</span><span>{videoDuration ? timeLabel(videoDuration) : "—"}</span></div></div>
-            <form className="url-label" onSubmit={loadVideo}><label htmlFor="lesson-video-url">Lesson video URL</label><input id="lesson-video-url" value={videoDraft} onChange={(event) => setVideoDraft(event.target.value)} placeholder="YouTube link or direct MP4 URL" /><button className="button-secondary" type="submit" disabled={importing || loading}>{importing ? "Importing captions…" : "Load video"}</button></form>
-            <p className="source-note" role="status">{captionStatus || "Paste a YouTube link and click Load video. Available captions are imported automatically into a separate lesson."}</p>
+            <form className="url-label" onSubmit={loadVideo}><label htmlFor="lesson-video-url">Lesson video URL</label><input id="lesson-video-url" value={videoDraft} onChange={(event) => setVideoDraft(event.target.value)} placeholder="YouTube link or direct MP4 URL" /><button className="button-secondary" type="submit" disabled={importing || loading}>{importing ? "Preparing video…" : "Load video"}</button></form>
+            <p className="source-note" role="status">{captionStatus || "Paste a YouTube link and click Load video. Captions are preferred; AI video notes are used if captions cannot be reached. Preparing a new video can take about a minute."}</p>
           </div>
 
           <div className="resource-card">
@@ -342,7 +347,7 @@ export default function Assistant() {
         </div>
 
         <aside className="chat-card">
-          <div className="chat-head"><div className="tutor-avatar">✳</div><div><h3>Your learning guide</h3><p><span className="status-dot" /> {courseId ? "Grounded in this course" : "Waiting for this video’s transcript"}</p></div><button className="icon-button" aria-label="More options">···</button></div>
+          <div className="chat-head"><div className="tutor-avatar">✳</div><div><h3>Your learning guide</h3><p><span className="status-dot" /> {courseId ? hasVideoNotes(courses.find((item) => item.id === courseId)) ? "AI video notes · approximate" : "Grounded in this course" : "Waiting for video content"}</p></div><button className="icon-button" aria-label="More options">···</button></div>
           {demoMode && <div className="demo-mode-note">Demo responses are active. Configure a model API key in the backend to enable AI-generated explanations.</div>}
           <div className="context-banner"><span>◷</span><span>Answering from material available up to <strong>{timeLabel(videoSeconds)}</strong></span></div>
           <div className="chat-scroll" aria-live="polite">

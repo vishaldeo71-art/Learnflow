@@ -25,7 +25,8 @@ def citation_for(chunk: dict[str, Any]) -> dict[str, Any]:
     if kind == "video":
         start = chunk.get("start_time")
         end = chunk.get("end_time")
-        label = f"Video {format_time(start)}-{format_time(end)}"
+        prefix = "AI video notes (approximate)" if (chunk.get("resource_name") or "").startswith("AI video notes") else "Video"
+        label = f"{prefix} {format_time(start)}-{format_time(end)}"
         seek_seconds = int(start or 0)
     elif kind == "pdf":
         page = chunk.get("page_number")

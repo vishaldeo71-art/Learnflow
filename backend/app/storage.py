@@ -156,14 +156,14 @@ class PostgresStore:
                        RETURNING id::text""", course_id, name, source_type,
                 )
                 await conn.execute("DELETE FROM chunks WHERE resource_id=$1::uuid", resource_id)
-                for chunk in chunks:
-                    await conn.execute(
+                if chunks:
+                    await conn.executemany(
                         """INSERT INTO chunks(id,course_id,resource_id,source_type,resource_name,content,embedding,
                            start_time,end_time,page_number,slide_number)
                            VALUES($1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7::extensions.vector,$8,$9,$10,$11)""",
-                        chunk.id, course_id, resource_id, source_type, name, chunk.content,
-                        _vector_literal(chunk.embedding), chunk.start_time, chunk.end_time,
-                        chunk.page_number, chunk.slide_number,
+                        [(chunk.id, course_id, resource_id, source_type, name, chunk.content,
+                          _vector_literal(chunk.embedding), chunk.start_time, chunk.end_time,
+                          chunk.page_number, chunk.slide_number) for chunk in chunks],
                     )
         return {"id": resource_id, "course_id": course_id, "name": name, "source_type": source_type, "chunk_count": len(chunks)}
 

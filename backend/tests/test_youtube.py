@@ -54,7 +54,7 @@ class YouTubeTests(unittest.IsolatedAsyncioTestCase):
     async def test_failure_does_not_create_course_or_fall_back(self):
         store = MemoryStore()
         await store.add_course('RAG sample')
-        with patch('app.main.fetch_captions', side_effect=CaptionError('Captions unavailable')):
+        with patch('app.main.fetch_captions', side_effect=CaptionError('Captions unavailable')), patch('app.main.settings.gemini_api_key', None):
             with self.assertRaises(HTTPException) as error:
                 await import_youtube(YouTubeInput(url='https://youtu.be/mx3J9wdbJ30'),store)
             self.assertEqual(error.exception.status_code,422)
