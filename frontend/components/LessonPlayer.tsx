@@ -1,6 +1,7 @@
 "use client";
 
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { resolvePlayhead } from "../lib/playhead";
 import { parseVideoSource } from "../lib/video-source";
 
 type YTPlayer = { getCurrentTime(): number; getDuration(): number; seekTo(seconds: number, allowSeekAhead: boolean): void; destroy(): void };
@@ -41,17 +42,19 @@ const LessonPlayer = forwardRef<LessonPlayerHandle, Props>(function LessonPlayer
   const youtube = useRef<YTPlayer | null>(null);
   const ready = useRef(false);
   const pendingSeek = useRef(initialTime);
+  const seekDeadline = useRef(0);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(Boolean(url));
 
   useImperativeHandle(ref, () => ({
     seekTo(seconds) {
       pendingSeek.current = seconds;
+      seekDeadline.current = Date.now() + 5000;
       if (youtube.current && ready.current) youtube.current.seekTo(seconds, true);
       else if (native.current && native.current.readyState >= 1) native.current.currentTime = seconds;
     },
     getCurrentTime() {
-      if (youtube.current && ready.current) return Math.floor(youtube.current.getCurrentTime());
+      if (youtube.current && ready.current) return resolvePlayhead(youtube.current.getCurrentTime(), pendingSeek.current, seekDeadline.current);
       if (native.current && native.current.readyState >= 1) return Math.floor(native.current.currentTime);
       return null;
     },
@@ -78,7 +81,11 @@ const LessonPlayer = forwardRef<LessonPlayerHandle, Props>(function LessonPlayer
             const update = () => {
               const time = target.getCurrentTime();
               const duration = target.getDuration();
-              if (Number.isFinite(time)) onTimeChange(Math.floor(time));
+              const resolved = resolvePlayhead(time, pendingSeek.current, seekDeadline.current);
+              if (resolved !== null) {
+                if (Math.abs(time - pendingSeek.current) <= 2) seekDeadline.current = 0;
+                onTimeChange(resolved);
+              }
               if (Number.isFinite(duration) && duration > 0) onDurationChange(Math.floor(duration));
             };
             update();

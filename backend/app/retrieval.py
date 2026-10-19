@@ -4,6 +4,7 @@ import re
 from typing import Any
 
 from .embeddings import EmbeddingProvider, tokens
+from .source_quality import informative
 
 
 def is_overview_question(question: str) -> bool:
@@ -17,7 +18,7 @@ def is_overview_question(question: str) -> bool:
 
 def format_time(seconds: int | None) -> str:
     seconds = max(0, int(seconds or 0))
-    return f"{seconds // 60:02d}:{seconds % 60:02d}"
+    return f"{seconds // 3600}:{seconds // 60 % 60:02d}:{seconds % 60:02d}" if seconds >= 3600 else f"{seconds // 60:02d}:{seconds % 60:02d}"
 
 
 def citation_for(chunk: dict[str, Any]) -> dict[str, Any]:
@@ -55,20 +56,43 @@ class Retriever:
         matches = await self.store.search_chunks(course_id, query, vector, current_time, 24)
         reranked = self._rerank(query, matches)[: self.limit]
         future = None if reranked else await self.store.future_match(course_id, query, vector, current_time)
+        semantic = getattr(getattr(self.embedder, "settings", None), "embedding_provider", "local") == "gemini"
+        if future and semantic and float(future.get("score", 0)) < 0.65:
+            future = None
         return reranked, future
 
     async def covered(self, course_id: str, current_time: int, limit: int = 8) -> list[dict[str, Any]]:
-        # Actions such as summarize/quiz need a small covered-so-far sample, not an unbounded transcript.
-        return await self.store.covered_chunks(course_id, current_time, min(limit, 10))
+        rows = await self.store.study_chunks(course_id, current_time)
+        unique = {}
+        for row in rows:
+            text = row.get("content", "")
+            if informative(text):
+                unique.setdefault(re.sub(r"\s+", " ", text.casefold()).strip(), row)
+        useful = sorted(unique.values(), key=lambda row: row.get("end_time") or 0)
+        limit = min(limit, 10)
+        if len(useful) <= limit:
+            return useful
+        recent_count = limit // 2
+        earlier = useful[:-recent_count]
+        sample_count = limit - recent_count
+        return [earlier[int(index * len(earlier) / sample_count)] for index in range(sample_count)] + useful[-recent_count:]
 
-    @staticmethod
-    def _rerank(query: str, chunks: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def _rerank(self, query: str, chunks: list[dict[str, Any]]) -> list[dict[str, Any]]:
         query_terms = set(tokens(query))
+        semantic = getattr(getattr(self.embedder, "settings", None), "embedding_provider", "local") == "gemini"
         ranked = []
         for chunk in chunks:
+            if not informative(chunk.get("content", "")):
+                continue
             body_terms = set(tokens(chunk.get("content", "")))
             overlap = len(query_terms & body_terms) / max(1, len(query_terms))
-            score = 0.58 * float(chunk.get("score", 0.0)) + 0.42 * overlap
+            if semantic and "semantic_score" in chunk:
+                similarity = float(chunk["semantic_score"])
+                if similarity < 0.53:
+                    continue
+                score = 0.9 * similarity + 0.1 * overlap
+            else:
+                score = 0.58 * float(chunk.get("score", 0.0)) + 0.42 * overlap
             ranked.append(({**chunk, "score": score}, score))
         ranked.sort(key=lambda pair: pair[1], reverse=True)
         return [item for item, _ in ranked]

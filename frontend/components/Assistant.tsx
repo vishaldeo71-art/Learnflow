@@ -13,10 +13,11 @@ const videoReadyStatus = (course: Course) => hasVideoNotes(course)
   : "Transcript ready. Play the video, then ask about what you have watched.";
 
 type Citation = { label: string; source_type: string; seek_seconds: number | null; resource_name: string };
-type Message = { role: "user" | "assistant"; content: string; citations?: Citation[]; refusal_reason?: string | null };
+type Message = { role: "user" | "assistant"; content: string; citations?: Citation[]; refusal_reason?: string | null; video_time_seconds: number };
 type Scorecard = { overall_score: number; dimensions: { name: string; score: number; evidence: string }[]; strengths: string[]; improvement_areas: string[]; recommendations: string[]; method: string };
 
 function timeLabel(seconds: number) {
+  if (seconds >= 3600) return `${Math.floor(seconds / 3600)}:${String(Math.floor(seconds / 60) % 60).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
   return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
@@ -102,15 +103,16 @@ export default function Assistant({ initialCourses, preferredCourseId }: { initi
     setLoading(true);
     setNotice("");
     const currentQuestion = text.trim();
-    setMessages((items) => [...items, { role: "user", content: currentQuestion }]);
+    const askedAt = playerRef.current?.getCurrentTime() ?? videoSeconds;
+    setMessages((items) => [...items, { role: "user", content: currentQuestion, video_time_seconds: askedAt }]);
     setQuestion("");
     try {
       const result = await api<{ session_id: string; answer: string; citations: Citation[]; refusal_reason?: string | null }>("v1/learning/ask", {
         method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ course_id: courseId, session_id: sessionId || null, question: currentQuestion, video_time_seconds: playerRef.current?.getCurrentTime() ?? videoSeconds, action }),
+        body: JSON.stringify({ course_id: courseId, session_id: sessionId || null, question: currentQuestion, video_time_seconds: askedAt, action }),
       });
       setSessionId(result.session_id);
-      setMessages((items) => [...items, { role: "assistant", content: result.answer, citations: result.citations, refusal_reason: result.refusal_reason }]);
+      setMessages((items) => [...items, { role: "assistant", content: result.answer, citations: result.citations, refusal_reason: result.refusal_reason, video_time_seconds: askedAt }]);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Could not get an answer.");
       setQuestion(currentQuestion);
@@ -361,7 +363,7 @@ export default function Assistant({ initialCourses, preferredCourseId }: { initi
             {!messages.length && <div className="welcome-message"><div className="welcome-mark">✳</div><h4>{importing ? "Getting your lesson ready…" : !courseId ? "Transcript needed" : "Curiosity makes this stick."}</h4><p>{!courseId ? captionStatus || "Load a video to get started." : "Play the video, then ask about the section you have watched. Every answer uses this lesson's material."}</p><div className="suggestion-label">TRY ASKING</div><button className="suggestion" disabled={!courseId || importing || loading} onClick={() => ask("What is this lesson about?")}>What is this lesson about? <span>↗</span></button><button className="suggestion" disabled={!courseId || importing || loading} onClick={() => ask("Explain the idea in simpler words", "simplify")}>Explain this section simply <span>↗</span></button></div>}
             {messages.map((message, index) => <article className={`message ${message.role}`} key={`${index}-${message.role}`}>
               <div className="message-avatar">{message.role === "assistant" ? "✳" : "A"}</div>
-              <div className="message-body"><div className="message-label">{message.role === "assistant" ? "YOUR LEARNING GUIDE" : "YOU"}</div><p>{message.content}</p>
+              <div className="message-body"><div className="message-label">{message.role === "assistant" ? "YOUR LEARNING GUIDE" : "YOU"} · at {timeLabel(message.video_time_seconds)}</div><p>{message.content}</p>
                 {!!message.citations?.length && <div className="citations"><span className="citation-label">SOURCES</span>{message.citations.map((citation) => <button key={citation.label} className="citation" onClick={() => seekTo(citation.seek_seconds)} title={citation.seek_seconds === null ? citation.label : `Seek to ${timeLabel(citation.seek_seconds)}`}><span>↗</span>{citation.label}</button>)}</div>}
                 {message.refusal_reason && <div className="refusal-tag">{message.refusal_reason === "future_video_content" ? "AHEAD IN THIS LESSON" : "COURSE SOURCES CHECKED"}</div>}
               </div>

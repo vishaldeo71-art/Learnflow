@@ -132,7 +132,7 @@ async def make_chunks(course_id: str, resource_id: str, name: str, source_type: 
                 resource_name=name,
                 source_type=source_type,
                 content=part,
-                embedding=await embedder.embed(part),
+                embedding=[],
                 start_time=int(row["start"]) if row.get("start") is not None else None,
                 end_time=int(row["end"]) if row.get("end") is not None else None,
                 page_number=int(row["page_number"]) if row.get("page_number") is not None else None,
@@ -140,5 +140,13 @@ async def make_chunks(course_id: str, resource_id: str, name: str, source_type: 
             ))
     if not chunks:
         raise ValueError("This file contains no extractable text.")
+    if hasattr(embedder, "embed_many"):
+        vectors = await embedder.embed_many([chunk.content for chunk in chunks])
+    else:
+        vectors = [await embedder.embed(chunk.content) for chunk in chunks]
+    if len(vectors) != len(chunks):
+        raise ValueError("Embedding count does not match the source chunks.")
+    for chunk, vector in zip(chunks, vectors):
+        chunk.embedding = vector
     return chunks
 

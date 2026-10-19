@@ -5,6 +5,7 @@ from urllib.parse import parse_qs, urlparse
 
 import requests
 from youtube_transcript_api import YouTubeTranscriptApi
+from .source_quality import caption_quality
 
 
 class CaptionError(ValueError):
@@ -75,8 +76,22 @@ def fetch_captions(video_id: str):
                 raise CaptionError("This video has no captions. Upload a transcript under Supporting materials.")
             # Prefer English, then Hindi, then any available original language; manual over generated.
             tracks.sort(key=lambda track: ({"en": 0, "hi": 1}.get(track.language_code.split("-")[0], 2), track.is_generated))
-            transcript = tracks[0].fetch()
-            rows = caption_rows(transcript)
+            transcript = None
+            rows = []
+            best_quality = 0.0
+            for track in tracks[:3]:
+                try:
+                    candidate = track.fetch()
+                    candidate_rows = caption_rows(candidate)
+                    quality = caption_quality(candidate_rows)
+                    if quality > best_quality:
+                        transcript, rows, best_quality = candidate, candidate_rows, quality
+                    if quality >= 0.95:
+                        break
+                except Exception:
+                    continue
+            if transcript is None or best_quality < 0.8:
+                raise CaptionError("The available caption tracks contain too much unreadable or repeated text. Video analysis or a matching transcript is needed.")
         except CaptionError:
             raise
         except Exception as exc:

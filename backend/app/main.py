@@ -339,27 +339,30 @@ async def ask(payload: AskInput, store=Depends(ready_store)):
     generic_action_without_history = False
     if action in {"simplify", "example", "where"}:
         previous_question = next((item["content"] for item in reversed(history) if item["role"] == "user"), None)
-        if previous_question:
+        generic_questions = {"Quiz me on concepts covered so far", "Summarize what I have learned so far", "Compare the concepts covered so far", "Explain the idea in simpler words", "Give me a practical example", "Where was this discussed?"}
+        if previous_question and previous_question not in generic_questions and not is_overview_question(previous_question):
             focus_question = previous_question
         else:
             generic_action_without_history = True
     latest_user_question = next((item["content"] for item in reversed(history) if item["role"] == "user"), "")
     referential = any(token in payload.question.lower().split() for token in ("it", "that", "this", "they", "them", "those")) or len(payload.question.split()) <= 4
     retrieval_question = f"{latest_user_question} {payload.question}".strip() if latest_user_question and referential else focus_question
-    if (action in {"summary", "quiz"} or (action == "compare" and payload.question == "Compare the concepts covered so far")) or is_overview_question(focus_question) or (generic_action_without_history and action in {"simplify", "example"}):
-        matches, future = await state.retriever.covered(payload.course_id, payload.video_time_seconds), None
-        if not matches:
+    try:
+        if (action in {"summary", "quiz"} or (action == "compare" and payload.question == "Compare the concepts covered so far")) or is_overview_question(focus_question) or generic_action_without_history:
+            matches, future = await state.retriever.covered(payload.course_id, payload.video_time_seconds), None
+        else:
             matches, future = await state.retriever.retrieve(payload.course_id, retrieval_question, payload.video_time_seconds)
-    else:
-        matches, future = await state.retriever.retrieve(payload.course_id, retrieval_question, payload.video_time_seconds)
+    except Exception as exc:
+        logger.exception("Learning retrieval failed")
+        raise HTTPException(status_code=503, detail="The course search service is temporarily unavailable. Please retry in a moment.") from exc
     citations = citation_list(matches)
     refusal_reason = None
-    if not matches and future:
-        answer = "That topic appears later in the lecture and hasn't been covered at your current position yet. I can explain it once you reach that section."
-        refusal_reason = "future_video_content"
-    elif not matches and course.get("video_url") and payload.video_time_seconds == 0:
+    if not matches and course.get("video_url") and payload.video_time_seconds == 0:
         answer = "The video is ready. Play it first, then ask about the part you have watched."
         refusal_reason = "not_started"
+    elif not matches and future:
+        answer = "That topic appears later in the lecture and hasn't been covered at your current position yet. I can explain it once you reach that section."
+        refusal_reason = "future_video_content"
     elif not matches:
         answer = "I couldn't find support for that in the available course resources at this point, so I don't want to guess."
         refusal_reason = "unsupported_by_resources"
@@ -368,8 +371,8 @@ async def ask(payload: AskInput, store=Depends(ready_store)):
             "simplify": "Explain in simpler words, defining jargon.",
             "example": "Give one concrete example or analogy grounded in the sources.",
             "where": "Point to where the idea was discussed, using the citations.",
-            "summary": "Summarize only what is covered by the retrieved allowed sources.",
-            "quiz": "Create three short practice questions using only the retrieved allowed sources, then provide concise answer keys.",
+            "summary": "Summarize the concepts represented by these sampled watched passages. The samples span the watched portion but are not a complete transcript; do not imply exhaustive coverage.",
+            "quiz": "Create three short practice questions about the programming or subject concepts supported by the sources, with concise answer keys. Test understanding of concepts, not chapter numbers, presenter names, or video navigation. Ignore garbled speech; if fewer concepts are supported, give fewer useful questions.",
             "compare": "Compare the ideas named in the learner's question only where the sources support the comparison.",
             "answer": "Answer the learner's question directly.",
         }.get(action, "Answer the learner's question directly.")
@@ -382,9 +385,10 @@ async def ask(payload: AskInput, store=Depends(ready_store)):
             *[f"{item['role']}: {item['content']}" for item in history],
             f"LEARNER QUESTION: {focus_question}",
             "AI video notes are approximate and cover only analyzed clips. If notes are used, acknowledge this limitation; a summary is of the analyzed section, not the whole video." if uses_video_notes(course) else "",
+            "Write the entire answer, questions, and answer keys in English unless the learner explicitly requests another language or writes their question in another language. Do not switch languages merely because the sources are in Hindi.",
             "ALLOWED SOURCES:",
-            context_for(matches),
-            "Answer only from the allowed source text. If the evidence does not support a claim, say so. Mention source labels [S1], [S2] when useful. Never infer or reveal later-video material.",
+            context_for(matches, max_chars=24000),
+            "Sources may be in Hindi or another language. Understand their meaning and answer in the language of the learner question. Ignore repetition or unintelligible fragments. Answer only from the allowed source text. If the evidence does not support a claim, say so. Mention source labels [S1], [S2] when useful. Never infer or reveal later-video material.",
         ])
         try:
             answer = await state.llm.generate(

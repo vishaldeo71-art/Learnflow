@@ -74,6 +74,15 @@ class MemoryStore:
         eligible.sort(key=lambda chunk: (0 if chunk.source_type == "video" else 1, -(chunk.end_time or 0)))
         return [{**chunk.public_dict(), "score": 1.0} for chunk in eligible[:limit]]
 
+    async def study_chunks(self, course_id: str, current_time: int, limit: int = 120) -> list[dict[str, Any]]:
+        rows = await self.covered_chunks(course_id, current_time, len(self.chunks.get(course_id, [])))
+        rows.sort(key=lambda row: row.get("end_time") or 0)
+        if len(rows) <= limit:
+            return rows
+        recent = rows[-24:]
+        earlier = rows[:-24]
+        return [earlier[int(index * len(earlier) / (limit - 24))] for index in range(limit - 24)] + recent
+
     async def future_match(self, course_id: str, query: str, embedding: list[float], current_time: int) -> dict[str, Any] | None:
         query_tokens = set(tokens(query))
         matches = []
@@ -169,7 +178,9 @@ class PostgresStore:
 
     async def search_chunks(self, course_id: str, query: str, embedding: list[float], current_time: int, limit: int) -> list[dict[str, Any]]:
         rows = await self.pool.fetch(
-            "SELECT * FROM search_course_chunks($1::uuid,$2::text::extensions.vector,$3,$4,$5)",
+            """SELECT s.*, (1-(c.embedding OPERATOR(extensions.<=>) $2::text::extensions.vector))::real AS semantic_score
+               FROM search_course_chunks($1::uuid,$2::text::extensions.vector,$3,$4,$5) s
+               JOIN chunks c ON c.id=s.id""",
             course_id, _vector_literal(embedding), query, current_time, limit,
         )
         return [dict(row) for row in rows]
@@ -180,6 +191,20 @@ class PostgresStore:
                FROM chunks WHERE course_id=$1::uuid AND (source_type <> 'video' OR end_time <= $2)
                ORDER BY CASE WHEN source_type='video' THEN 0 ELSE 1 END, end_time DESC NULLS LAST
                LIMIT $3""", course_id, current_time, limit,
+        )
+        return [dict(row) for row in rows]
+
+    async def study_chunks(self, course_id: str, current_time: int, limit: int = 120) -> list[dict[str, Any]]:
+        # Rank only allowed rows. Sample across history and retain the recent section.
+        rows = await self.pool.fetch(
+            """WITH allowed AS (
+                 SELECT id,content,source_type,resource_name,start_time,end_time,page_number,slide_number,
+                        row_number() OVER (ORDER BY end_time NULLS FIRST,id) AS n,
+                        count(*) OVER () AS total
+                 FROM chunks WHERE course_id=$1::uuid AND (source_type <> 'video' OR end_time <= $2)
+               ) SELECT *,1.0::real AS score FROM allowed
+               WHERE n > total-24 OR mod(n-1,greatest(1,ceil(total::numeric / greatest(1,$3-24))::int))=0
+               ORDER BY end_time NULLS FIRST LIMIT $3""", course_id, current_time, limit,
         )
         return [dict(row) for row in rows]
 

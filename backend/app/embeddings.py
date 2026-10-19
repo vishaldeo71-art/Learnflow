@@ -54,18 +54,7 @@ class EmbeddingProvider:
             )
             return response.data[0].embedding
         if provider == "gemini":
-            if not self.settings.gemini_api_key:
-                raise RuntimeError("GEMINI_API_KEY is required for Gemini embeddings.")
-            from google import genai
-            from google.genai import types
-
-            client = genai.Client(api_key=self.settings.gemini_api_key)
-            response = await client.aio.models.embed_content(
-                model=self.settings.embedding_model or "gemini-embedding-2",
-                contents=text,
-                config=types.EmbedContentConfig(output_dimensionality=self.settings.embedding_dimensions),
-            )
-            return list(response.embeddings[0].values)
+            return (await self._gemini_batch([text], "RETRIEVAL_QUERY"))[0]
         if provider == "bedrock":
             import json
             import boto3
@@ -82,3 +71,40 @@ class EmbeddingProvider:
 
             return await asyncio.to_thread(invoke)
         raise ValueError(f"Unsupported EMBEDDING_PROVIDER: {provider}")
+
+    async def embed_many(self, texts: list[str]) -> list[list[float]]:
+        if self.settings.embedding_provider.lower() != "gemini":
+            return [await self.embed(text) for text in texts]
+        # gemini-embedding-001 returns one vector per input string; batching keeps
+        # long, multilingual caption imports practical without changing dimensions.
+        vectors = []
+        for start in range(0, len(texts), 64):
+            vectors.extend(await self._gemini_batch(texts[start:start + 64], "RETRIEVAL_DOCUMENT"))
+        return vectors
+
+    async def _gemini_batch(self, texts: list[str], task_type: str) -> list[list[float]]:
+        if not self.settings.gemini_api_key:
+            raise RuntimeError("GEMINI_API_KEY is required for Gemini embeddings.")
+        from google import genai
+        from google.genai import types
+
+        def run():
+            client = genai.Client(api_key=self.settings.gemini_api_key, http_options=types.HttpOptions(timeout=60000))
+            try:
+                response = client.models.embed_content(
+                    model=self.settings.embedding_model or "gemini-embedding-001", contents=texts,
+                    config=types.EmbedContentConfig(output_dimensionality=1024, task_type=task_type),
+                )
+                if len(response.embeddings or []) != len(texts):
+                    raise RuntimeError("Embedding provider returned an unexpected number of vectors.")
+                output = []
+                for item in response.embeddings:
+                    vector = list(item.values)
+                    if len(vector) != self.settings.embedding_dimensions or not all(math.isfinite(value) for value in vector):
+                        raise RuntimeError("Embedding provider returned an invalid vector.")
+                    norm = math.sqrt(sum(value * value for value in vector)) or 1.0
+                    output.append([value / norm for value in vector])
+                return output
+            finally:
+                client.close()
+        return await asyncio.to_thread(run)

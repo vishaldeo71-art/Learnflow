@@ -78,6 +78,7 @@ Choose one provider in `.env`, add its server-side key/credentials, then restart
 LLM_PROVIDER=gemini
 GEMINI_API_KEY=replace-with-your-key
 EMBEDDING_PROVIDER=gemini
+EMBEDDING_MODEL=gemini-embedding-001
 EMBEDDING_DIMENSIONS=1024
 ```
 
@@ -129,3 +130,9 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/DEMO.md`](docs/DEMO.m
 API key enforcement is optional locally and should be enabled for a public deployment. The in-process rate limiter is best effort; use an edge/API gateway limit with multiple replicas. A shared API key is not per-learner identity: connect LMS/Supabase Auth JWTs and user-scoped authorization before storing real learner or candidate data. Uploads are size-limited and parsed in memory, not retained in Supabase Storage. Add object storage, malware scanning, retention controls, data deletion and privacy notices for a real cohort.
 
 The scorecard is a transparent practice rubric, not a hiring recommendation. Cost figures use editable planning assumptions and must be updated against the chosen provider's current pricing. Extracted resume and job-description text is stored with the interview session and sent to the configured model provider to personalize questions. Before using real candidate data, define consent, access, retention, deletion, and provider data-handling controls.
+
+### Transcript quality and watched context
+
+Caption imports compare available tracks and reject collapsed repeated text. Original Hindi captions can be used directly with Gemini multilingual embeddings; English questions receive English answers. Summary and quiz actions sample useful passages across the watched portion and retain recent context. They never use a future-topic search. Specific questions use semantic similarity, with every video passage gated by its end timestamp.
+
+Use the same embedding provider/model for document indexing and question retrieval. Switching from local feature hashing to Gemini requires rebuilding **all** stored chunk vectors before serving semantic queries; equal vector dimensions alone do not make different models compatible. Keep a recoverable data backup during that migration. Chat answers display the question's captured video position, independent of later playback movement.
