@@ -16,14 +16,18 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
   if (backendKey) headers.set("authorization", `Bearer ${backendKey}`);
   const body = request.method === "GET" || request.method === "HEAD" ? undefined : await request.arrayBuffer();
   try {
-    const upstream = await fetch(upstreamUrl, { method: request.method, headers, body, cache: "no-store" });
-    return new Response(upstream.body, { status: upstream.status, headers: {
+    const upstream = await fetch(upstreamUrl, { method: request.method, headers, body, cache: "no-store", signal: AbortSignal.timeout(110000) });
+    // These endpoints return JSON. Read the response before committing browser
+    // headers so interrupted backend streams become a recoverable HTTP error.
+    const responseBody = await upstream.text();
+    return new Response(responseBody, { status: upstream.status, headers: {
       "content-type": upstream.headers.get("content-type") || "application/json",
       "x-request-id": upstream.headers.get("x-request-id") || "",
       "cache-control": "no-store",
     } });
-  } catch {
-    return Response.json({ detail: "The learning API is unavailable. Start the backend and retry." }, { status: 502 });
+  } catch (error) {
+    console.error("Learnflow backend request failed", { path: path.join("/"), error: error instanceof Error ? error.name : "UnknownError" });
+    return Response.json({ detail: "The learning service is temporarily unavailable. Please retry in a moment." }, { status: 502 });
   }
 }
 

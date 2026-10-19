@@ -4,8 +4,9 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 
 import LessonPlayer, { LessonPlayerHandle } from "./LessonPlayer";
 import { parseVideoSource } from "../lib/video-source";
+import { api } from "../lib/api";
+import { cachedVideoCourse, defaultCourse, rememberCourse, type Course } from "../lib/courses";
 
-type Course = { id: string; title: string; description?: string; video_url?: string | null };
 const hasVideoNotes = (course?: Course) => course?.description?.startsWith("AI video notes · Gemini") ?? false;
 const videoReadyStatus = (course: Course) => hasVideoNotes(course)
   ? "Video analysis ready. Questions analyze up to five minutes ending at your playhead. AI notes and timings are approximate; summaries cover analyzed sections only."
@@ -15,36 +16,30 @@ type Citation = { label: string; source_type: string; seek_seconds: number | nul
 type Message = { role: "user" | "assistant"; content: string; citations?: Citation[]; refusal_reason?: string | null };
 type Scorecard = { overall_score: number; dimensions: { name: string; score: number; evidence: string }[]; strengths: string[]; improvement_areas: string[]; recommendations: string[]; method: string };
 
-async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`/api/${path.replace(/^\//, "")}`, { ...init, cache: "no-store" });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.detail || "The request could not be completed.");
-  return data as T;
-}
-
 function timeLabel(seconds: number) {
   return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
-export default function Assistant() {
+export default function Assistant({ initialCourses, preferredCourseId }: { initialCourses: Course[]; preferredCourseId?: string }) {
+  const initialCourse = defaultCourse(initialCourses, preferredCourseId);
   const [tab, setTab] = useState<"learn" | "interview">("learn");
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [courseId, setCourseId] = useState("");
+  const [courses, setCourses] = useState<Course[]>(initialCourses);
+  const [courseId, setCourseId] = useState(initialCourse?.id || "");
   const [sessionId, setSessionId] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [question, setQuestion] = useState("");
   const [videoSeconds, setVideoSeconds] = useState(0);
-  const [videoUrl, setVideoUrl] = useState("");
+  const [videoUrl, setVideoUrl] = useState(initialCourse?.video_url || "");
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const playerRef = useRef<LessonPlayerHandle>(null);
   const [videoDraft, setVideoDraft] = useState(videoUrl);
-  const [videoDuration, setVideoDuration] = useState(2040);
+  const [videoDuration, setVideoDuration] = useState(initialCourse?.video_url ? 0 : 2040);
   const [newCourseTitle, setNewCourseTitle] = useState("");
   const [transcriptText, setTranscriptText] = useState("");
   const [importing, setImporting] = useState(false);
-  const [captionStatus, setCaptionStatus] = useState("");
+  const [captionStatus, setCaptionStatus] = useState(initialCourse?.video_url ? videoReadyStatus(initialCourse) : "");
   const [demoMode, setDemoMode] = useState(false);
 
   useEffect(() => {
@@ -74,20 +69,22 @@ export default function Assistant() {
 
   const startSession = useCallback(async (id: string) => {
     if (!id) return;
-    const result = await api<{ id: string }>("v1/learning/sessions", {
-      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ course_id: id }),
-    });
-    setSessionId(result.id);
+    // The first question creates its session atomically on the backend. Opening a
+    // cached lesson should never depend on a separate session-creation request.
+    setSessionId("");
     setMessages([]);
   }, []);
 
   useEffect(() => {
-    api<{ courses: Course[] }>("v1/courses")
+    let active = true;
+    (initialCourses.length ? Promise.resolve({ courses: initialCourses }) : api<{ courses: Course[] }>("v1/courses"))
       .then(async ({ courses: available }) => {
+        if (!active) return;
         setCourses(available);
         if (available.length) {
-          const saved = window.localStorage.getItem("learnflow-course");
-          const chosen = available.find((course) => course.id === saved) || available[0];
+          let saved: string | undefined;
+          try { saved = window.localStorage.getItem("learnflow-course") || undefined; } catch { /* Optional storage. */ }
+          const chosen = defaultCourse(available, preferredCourseId || saved)!;
           setCourseId(chosen.id);
           setVideoUrl(chosen.video_url || "");
           setVideoDraft(chosen.video_url || "");
@@ -96,8 +93,9 @@ export default function Assistant() {
           await startSession(chosen.id);
         }
       })
-      .catch((error: Error) => setNotice(error.message));
-  }, [startSession]);
+      .catch((error: Error) => { if (active) setNotice(error.message); });
+    return () => { active = false; };
+  }, [startSession, initialCourses, preferredCourseId]);
 
   async function ask(text: string, action = "answer") {
     if (!courseId || !text.trim() || loading || importing) return;
@@ -115,6 +113,7 @@ export default function Assistant() {
       setMessages((items) => [...items, { role: "assistant", content: result.answer, citations: result.citations, refusal_reason: result.refusal_reason }]);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Could not get an answer.");
+      setQuestion(currentQuestion);
       setMessages((items) => items.slice(0, -1));
     } finally {
       setLoading(false);
@@ -135,7 +134,7 @@ export default function Assistant() {
   async function selectCourse(id: string) {
     const course = courses.find((item) => item.id === id);
     setCourseId(id);
-    window.localStorage.setItem("learnflow-course", id);
+    rememberCourse(id);
     setVideoUrl(course?.video_url || "");
     setVideoDraft(course?.video_url || "");
     setVideoSeconds(0);
@@ -157,6 +156,14 @@ export default function Assistant() {
       if (sample) await selectCourse(sample.id);
       return;
     }
+    if (source.kind === "youtube") {
+      const saved = cachedVideoCourse(courses, source.id);
+      if (saved) {
+        setNotice("");
+        await selectCourse(saved.id);
+        return;
+      }
+    }
     // Detach old sources before the request: a failed import must never use the sample course.
     setCourseId("");
     setSessionId("");
@@ -177,7 +184,7 @@ export default function Assistant() {
       const course = result.course;
       setCourses((items) => [...items.filter((item) => item.id !== course.id), course]);
       setCourseId(course.id);
-      window.localStorage.setItem("learnflow-course", course.id);
+      rememberCourse(course.id);
       await startSession(course.id);
       setCaptionStatus(source.kind === "youtube" ? videoReadyStatus(course) : "Upload this video's transcript below. Direct video files do not include captions automatically.");
     } catch (error) {
@@ -198,7 +205,7 @@ export default function Assistant() {
       await startSession(course.id);
       setNewCourseTitle("");
       setVideoUrl(course.video_url || ""); setVideoDraft(course.video_url || ""); setVideoSeconds(0); setVideoDuration(course.video_url ? 0 : 2040);
-      window.localStorage.setItem("learnflow-course", course.id);
+      rememberCourse(course.id);
       setCaptionStatus(course.video_url ? "Lesson created. Add its matching VTT/SRT transcript below to enable timestamp-aware questions." : "");
       setNotice(course.video_url ? "Lesson created. Upload this video's VTT/SRT transcript below; timestamps will control which passages the guide can use." : "Course created. Add its supporting materials below before asking questions.");
     } catch (error) { setNotice(error instanceof Error ? error.message : "Could not create the course."); }
