@@ -1,6 +1,7 @@
 "use client";
 
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { useI18n } from "./I18nProvider";
 import { resolvePlayhead } from "../lib/playhead";
 import { parseVideoSource } from "../lib/video-source";
 
@@ -35,6 +36,7 @@ export type LessonPlayerHandle = { seekTo(seconds: number): void; getCurrentTime
 type Props = { url: string; initialTime: number; onTimeChange(seconds: number): void; onDurationChange(seconds: number): void };
 
 const LessonPlayer = forwardRef<LessonPlayerHandle, Props>(function LessonPlayer({ url, initialTime, onTimeChange, onDurationChange }, ref) {
+  const { t, locale } = useI18n();
   const source = parseVideoSource(url);
   const youtubeId = source.kind === "youtube" ? source.id : null;
   const host = useRef<HTMLDivElement>(null);
@@ -71,7 +73,7 @@ const LessonPlayer = forwardRef<LessonPlayerHandle, Props>(function LessonPlayer
       if (disposed) return;
       player = new YT.Player(node, {
         videoId: youtubeId, width: "100%", height: "100%",
-        playerVars: { playsinline: 1, origin: window.location.origin, start: pendingSeek.current },
+        playerVars: { playsinline: 1, origin: window.location.origin, hl: locale, start: pendingSeek.current },
         events: {
           onReady({ target }) {
             if (disposed) return;
@@ -100,19 +102,19 @@ const LessonPlayer = forwardRef<LessonPlayerHandle, Props>(function LessonPlayer
       });
       youtube.current = player;
     }).catch((failure: Error) => { if (!disposed) { setLoading(false); setError(failure.message); } });
-    return () => { disposed = true; ready.current = false; if (poll) clearInterval(poll); player?.destroy(); youtube.current = null; };
-  }, [youtubeId, onTimeChange, onDurationChange]);
+    return () => { disposed = true; if (player && ready.current) { const position=player.getCurrentTime();if(Number.isFinite(position))pendingSeek.current=Math.floor(position); } ready.current = false; if (poll) clearInterval(poll); player?.destroy(); youtube.current = null; };
+  }, [youtubeId, onTimeChange, onDurationChange, locale]);
 
   const message = source.kind === "invalid" ? source.message : error;
   return <div className="video-stage">
     {source.kind === "youtube" && <div className="youtube-player" ref={host} />}
-    {source.kind === "file" && <video ref={native} src={source.url} controls playsInline aria-label="Course video player"
+    {source.kind === "file" && <video ref={native} src={source.url} lang={locale} controls playsInline aria-label={t("Course video player")}
       onLoadedMetadata={(event) => { setLoading(false); const video = event.currentTarget; if (Number.isFinite(video.duration)) onDurationChange(Math.floor(video.duration)); video.currentTime = pendingSeek.current; }}
       onTimeUpdate={(event) => onTimeChange(Math.floor(event.currentTarget.currentTime))}
       onError={() => { setLoading(false); setError("This link is not a playable video file. Use a YouTube link or a direct MP4/WebM URL."); }} />}
-    {source.kind === "empty" && <div className="video-empty"><span className="play-orb">▶</span><strong>Sample transcript demo</strong><span>Use the timeline without a video, or load a YouTube or direct video link below.</span></div>}
-    {loading && !message && source.kind !== "empty" && <div className="player-feedback">Loading video…</div>}
-    {message && <div className="player-feedback" role="alert">{message}</div>}
+    {source.kind === "empty" && <div className="video-empty"><span className="play-orb">▶</span><strong>{t("Sample transcript demo")}</strong><span>{t("Use the timeline without a video, or load a YouTube or direct video link below.")}</span></div>}
+    {loading && !message && source.kind !== "empty" && <div className="player-feedback">{t("Loading video…")}</div>}
+    {message && <div className="player-feedback" role="alert">{t(message)}</div>}
   </div>;
 });
 export default LessonPlayer;

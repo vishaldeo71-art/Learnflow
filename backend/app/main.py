@@ -77,10 +77,22 @@ class InterviewInput(BaseModel):
     resume_text: str = Field(default="", max_length=16000)
     job_description: str = Field(default="", max_length=16000)
     course_id: str | None = None
+    response_language: str = Field(default="en", max_length=16)
+
+    @field_validator("response_language")
+    @classmethod
+    def validate_response_language(cls, value: str) -> str:
+        return AskInput.validate_response_language(value)
 
 
 class InterviewTurnInput(BaseModel):
     answer: str = Field(min_length=1, max_length=5000)
+    response_language: str | None = Field(default=None, max_length=16)
+
+    @field_validator("response_language")
+    @classmethod
+    def validate_response_language(cls, value: str | None) -> str | None:
+        return AskInput.validate_response_language(value) if value is not None else None
 
 
 class AppState:
@@ -507,6 +519,7 @@ async def start_interview(payload: InterviewInput, store=Depends(ready_store)):
         payload.role, payload.skill_level, payload.interview_type, payload.duration_minutes,
         payload.resume_text, payload.job_description, course_context,
     )
+    interview.response_language = payload.response_language
     try:
         question = await next_question(interview, state.llm)
     except Exception as exc:
@@ -532,6 +545,8 @@ async def interview_turn(interview_id: str, payload: InterviewTurnInput, store=D
         raise HTTPException(status_code=404, detail="Interview not found")
     if interview.completed:
         raise HTTPException(status_code=409, detail="This interview is already complete")
+    if payload.response_language is not None:
+        interview.response_language = payload.response_language
     interview.turns.append({"role": "candidate", "content": payload.answer})
     await store.save_interview(interview)
     max_answers = interview.duration_minutes // 2

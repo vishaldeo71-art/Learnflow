@@ -1,3 +1,6 @@
+import { cookies } from "next/headers";
+import { UI_LANGUAGE_KEY, validUiLocale } from "@/lib/i18n";
+import { loadUiMessages } from "@/lib/i18n-server";
 import Assistant from "@/components/Assistant";
 import { cachedVideoCourse, type Course } from "@/lib/courses";
 
@@ -23,6 +26,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ v
   }
   const { video } = await searchParams;
   const preferred = typeof video === "string" && /^[\w-]{11}$/.test(video) ? cachedVideoCourse(courses, video) : undefined;
-  return <Assistant initialCourses={courses} preferredCourseId={preferred?.id} />;
+  const uiLocale = validUiLocale((await cookies()).get(UI_LANGUAGE_KEY)?.value);
+  return <Assistant initialCourses={courses} preferredCourseId={preferred?.id} initialUiLocale={uiLocale} initialUiMessages={await loadUiMessages(uiLocale)} />;
 }
 

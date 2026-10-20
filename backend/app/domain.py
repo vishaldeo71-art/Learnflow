@@ -36,6 +36,7 @@ class Interview:
     turns: list[dict[str, str]] = field(default_factory=list)
     completed: bool = False
     scorecard: dict[str, Any] | None = None
+    response_language: str = "en"
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
