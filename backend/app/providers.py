@@ -14,7 +14,7 @@ class LLMProvider:
     def __init__(self, settings: Settings):
         self.settings = settings
 
-    async def generate(self, system: str, prompt: str, max_tokens: int = 650) -> str:
+    async def generate(self, system: str, prompt: str, max_tokens: int = 650, *, allow_fallback: bool = True) -> str:
         provider = self.settings.llm_provider.lower()
         if provider == "mock":
             return self._offline_answer(system, prompt)
@@ -58,7 +58,7 @@ class LLMProvider:
                     or exc.__class__.__name__ in {"ConnectError", "TimeoutError", "TimeoutException"}
                     or "UNAVAILABLE" in str(exc)
                 )
-                if not transient:
+                if not transient or not allow_fallback:
                     raise
                 logger.warning("Gemini temporarily unavailable; returning a source-grounded demo response")
                 return (
