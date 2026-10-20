@@ -385,6 +385,7 @@ async def ask(payload: AskInput, store=Depends(ready_store)):
             *[f"{item['role']}: {item['content']}" for item in history],
             f"LEARNER QUESTION: {focus_question}",
             "AI video notes are approximate and cover only analyzed clips. If notes are used, acknowledge this limitation; a summary is of the analyzed section, not the whole video." if uses_video_notes(course) else "",
+            "Spoken captions may omit code punctuation, brackets, or subscripts. Do not reconstruct executable code from speech. Use conceptual explanations and plain-language quiz questions unless a source contains unambiguous code. In particular, an assignment to a variable is different from modifying an element inside a container; do not turn spoken item-assignment examples into variable-assignment examples.",
             "Write the entire answer, questions, and answer keys in English unless the learner explicitly requests another language or writes their question in another language. Do not switch languages merely because the sources are in Hindi.",
             "ALLOWED SOURCES:",
             context_for(matches, max_chars=24000),
