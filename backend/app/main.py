@@ -17,8 +17,8 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
-from .youtube import CaptionError, fetch_captions, video_id_from_url
-from .video_notes import VIDEO_NOTES_DESCRIPTION, MAX_CLIP_SECONDS, generate_video_notes, notes_resource_name, uses_video_notes
+from .youtube import CaptionError, fetch_captions, fetch_video_title, video_id_from_url
+from .video_notes import VIDEO_NOTES_DESCRIPTION, generate_video_notes, notes_clip_bounds, notes_resource_name, uses_video_notes
 from .config import get_settings
 from .domain import Interview
 from .embeddings import EmbeddingProvider
@@ -235,14 +235,27 @@ async def import_youtube(payload: YouTubeInput, store=Depends(ready_store)):
         async with asyncio.timeout(100):
             async with youtube_import_lock:
                 existing = next((course for course in await store.list_courses() if course.get("video_url") == canonical_url), None)
-                if existing and await store.covered_chunks(existing["id"], 86400, 1):
-                    return {"course": existing, "cached": True, "status": "ready", "source": "gemini_video" if uses_video_notes(existing) else "captions"}
+                if existing and (uses_video_notes(existing) or await store.covered_chunks(existing["id"], 86400, 1)):
+                    return {"course": existing, "cached": True, "status": "awaiting_analysis" if uses_video_notes(existing) else "ready", "source": "gemini_video" if uses_video_notes(existing) else "captions"}
                 try:
                     imported = await run_in_threadpool(fetch_captions, video_id)
+                    # A whole long lecture can exceed embedding quotas and the
+                    # request deadline. Use bounded watched-clip analysis instead.
+                    if settings.gemini_api_key and len(imported["rows"]) > 64:
+                        imported = None
                 except CaptionError:
                     if not settings.gemini_api_key:
                         raise
-                    imported = await generate_video_notes(canonical_url, 0, 60, settings)
+                    imported = None
+                if imported is None:
+                    # A silent intro or a blocked caption endpoint must not stop
+                    # the learner from attaching the video. Analyze a watched clip
+                    # only when they ask, in any detected spoken language.
+                    title = await run_in_threadpool(fetch_video_title, video_id)
+                    course = await store.add_course(
+                        title, VIDEO_NOTES_DESCRIPTION + ". Language is detected automatically; only analyzed clips are covered.", canonical_url
+                    )
+                    return {"course": course, "cached": False, "status": "awaiting_analysis", "source": "gemini_video", "language": "Auto-detected", "generated": True, "chunk_count": 0}
                 video_notes = imported.get("source") == "gemini_video"
                 resource_name = notes_resource_name(0, 60) if video_notes else f"youtube-{video_id}.vtt"
                 # Finish parsing/embedding before publishing a course. Failed fetches leave no course behind.
@@ -320,8 +333,7 @@ async def ask(payload: AskInput, store=Depends(ready_store)):
         session_id = (await store.create_session(payload.course_id))["id"]
     # Analyze a bounded, already-watched clip. Do not pass the full video to the answer model.
     if uses_video_notes(course) and payload.video_time_seconds > 0:
-        end = payload.video_time_seconds
-        start = max(0, end - MAX_CLIP_SECONDS)
+        start, end = notes_clip_bounds(payload.video_time_seconds)
         name = notes_resource_name(start, end)
         covered = await store.covered_chunks(payload.course_id, end, 40)
         if not any(row.get("resource_name") == name for row in covered):

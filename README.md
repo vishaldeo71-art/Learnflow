@@ -136,3 +136,9 @@ The scorecard is a transparent practice rubric, not a hiring recommendation. Cos
 Caption imports compare available tracks and reject collapsed repeated text. Original Hindi captions can be used directly with Gemini multilingual embeddings; English questions receive English answers. Summary and quiz actions sample useful passages across the watched portion and retain recent context. They never use a future-topic search. Specific questions use semantic similarity, with every video passage gated by its end timestamp.
 
 Use the same embedding provider/model for document indexing and question retrieval. Switching from local feature hashing to Gemini requires rebuilding **all** stored chunk vectors before serving semantic queries; equal vector dimensions alone do not make different models compatible. Keep a recoverable data backup during that migration. Chat answers display the question's captured video position, independent of later playback movement.
+
+### Videos in other languages without captions
+
+When caption retrieval fails and Gemini is configured, loading a YouTube link attaches the video without requiring speech in the first minute. The first question analyzes up to five already-watched minutes, automatically detects the original spoken language, and creates English learning notes. Questions can be asked in the learner's language. Analysis windows are rounded down to thirty-second boundaries so nearby follow-ups reuse cached notes; citations retain the actual analyzed bounds. AI notes are approximate and summaries cover analyzed clips, not the entire lecture.
+
+This fallback requires Gemini to access the public video. Private, unlisted, restricted, unsupported, or otherwise inaccessible videos can still fail. Matching timestamped transcripts can be uploaded or pasted in their original language when automatic access fails; multilingual document and query embeddings must use the same model.

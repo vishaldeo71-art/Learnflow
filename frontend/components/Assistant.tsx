@@ -9,7 +9,7 @@ import { cachedVideoCourse, defaultCourse, rememberCourse, type Course } from ".
 
 const hasVideoNotes = (course?: Course) => course?.description?.startsWith("AI video notes · Gemini") ?? false;
 const videoReadyStatus = (course: Course) => hasVideoNotes(course)
-  ? "Video analysis ready. Questions analyze up to five minutes ending at your playhead. AI notes and timings are approximate; summaries cover analyzed sections only."
+  ? "Video attached. Play it, then ask a question. The guide detects the spoken language automatically and analyzes up to five watched minutes. AI notes are approximate; summaries cover analyzed sections only."
   : "Transcript ready. Play the video, then ask about what you have watched.";
 
 type Citation = { label: string; source_type: string; seek_seconds: number | null; resource_name: string };
@@ -176,7 +176,7 @@ export default function Assistant({ initialCourses, preferredCourseId }: { initi
     playerRef.current?.seekTo(0);
     setImporting(true);
     setNotice("");
-    setCaptionStatus(source.kind === "youtube" ? "Preparing this video: trying captions, then AI video analysis if needed…" : "Direct video loaded. Add its transcript below to enable questions.");
+    setCaptionStatus(source.kind === "youtube" ? "Preparing this video: checking captions in available languages…" : "Direct video loaded. Add its transcript below to enable questions.");
     try {
       const result = source.kind === "youtube"
         ? await api<{ course: Course; cached: boolean; language?: string }>("v1/videos/youtube/import", {
@@ -368,7 +368,7 @@ export default function Assistant({ initialCourses, preferredCourseId }: { initi
                 {message.refusal_reason && <div className="refusal-tag">{message.refusal_reason === "future_video_content" ? "AHEAD IN THIS LESSON" : "COURSE SOURCES CHECKED"}</div>}
               </div>
             </article>)}
-            {loading && <div className="typing"><span /><span /><span /> Finding the right passage…</div>}
+            {loading && <div className="typing"><span /><span /><span /> Understanding your lesson…</div>}
           </div>
           <div className="quick-actions"><span>QUICK ACTIONS</span><button disabled={!courseId || importing || loading} onClick={() => ask("Explain the idea in simpler words", "simplify")}>Simplify</button><button disabled={!courseId || importing || loading} onClick={() => ask("Give me a practical example", "example")}>Example</button><button disabled={!courseId || importing || loading} onClick={() => ask("Summarize what I have learned so far", "summary")}>Summarize so far</button><button disabled={!courseId || importing || loading} onClick={() => ask("Quiz me on concepts covered so far", "quiz")}>Quiz me</button><button disabled={!courseId || importing || loading} onClick={() => ask("Where was this discussed?", "where")}>Where is this?</button><button disabled={!courseId || importing || loading} onClick={() => ask("Compare the concepts covered so far", "compare")}>Compare concepts</button></div>
           <form className="composer" onSubmit={submitQuestion}><textarea disabled={!courseId || importing} value={question} onChange={(event) => setQuestion(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void ask(question); } }} placeholder="Ask about what you’re learning…" maxLength={1800} rows={2} /><div className="composer-footer"><span>Enter to send · Shift + Enter for a new line</span><button className="send-button" disabled={!question.trim() || !courseId || loading || importing} aria-label="Send question">↑</button></div></form>

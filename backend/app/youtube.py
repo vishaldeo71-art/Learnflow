@@ -111,3 +111,15 @@ def fetch_captions(video_id: str):
         except (requests.RequestException, ValueError):
             pass
         return {"title": title, "video_url": canonical_url, "language": transcript.language, "generated": transcript.is_generated, "rows": rows}
+
+
+def fetch_video_title(video_id: str) -> str:
+    """Public metadata only; attaching a lesson must not depend on speech in its intro."""
+    title = f"YouTube lesson · {video_id}"
+    try:
+        with TimeoutSession() as session:
+            response = session.get("https://www.youtube.com/oembed", params={"url": f"https://www.youtube.com/watch?v={video_id}", "format": "json"}, timeout=5)
+            response.raise_for_status()
+            return str(response.json().get("title") or title)[:160]
+    except (requests.RequestException, ValueError):
+        return title
