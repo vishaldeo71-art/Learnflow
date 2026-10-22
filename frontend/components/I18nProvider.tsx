@@ -1,6 +1,7 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { translateUi, validUiLocale, uiDirection, UI_LANGUAGE_KEY, type UiMessages, type UiParams, type UiText } from "../lib/i18n";
+import { ANSWER_LANGUAGES } from "../lib/languages";
 
 type I18nValue = { locale: string; changingLocale: boolean; localeError: boolean; chooseLocale(code: string): Promise<boolean>; t(text: UiText, params?: UiParams): string; languageName(code: string): string; errorText(error: unknown, fallback: string): string; citationLabel(label: string): string };
 const Context = createContext<I18nValue | null>(null);
@@ -37,7 +38,9 @@ export function I18nProvider({initialLocale, initialMessages, children}: {initia
     document.title=t("Learnflow | AI Learning Assistant");
   }, [locale,t]);
   const value = useMemo<I18nValue>(() => ({locale,changingLocale,localeError,chooseLocale,t,
-    languageName(code) { try {return new Intl.DisplayNames([locale],{type:"language"}).of(code) || code;} catch {return code;} },
+    // Use the bundled names instead of Intl.DisplayNames: Node and the browser can
+    // ship different ICU data, which makes the server/client option text diverge.
+    languageName(code) { return ANSWER_LANGUAGES.find((language) => language.code === code)?.name || code; },
     errorText(error,fallback) {const key=error instanceof Error ? error.message : "";return messages[key] ? key : fallback;},
     citationLabel(label) {return label.replace(/^AI video notes \(approximate\)/,t("AI video notes (approximate)")).replace(/^Video /,t("Video")+" ").replace(/ · page /," · "+t("page")+" ").replace(/ · slide /," · "+t("slide")+" ");}
   }),[locale,changingLocale,localeError,chooseLocale,t,messages]);

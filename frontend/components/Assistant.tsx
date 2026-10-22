@@ -10,14 +10,15 @@ import LessonPlayer, { LessonPlayerHandle } from "./LessonPlayer";
 import { parseVideoSource } from "../lib/video-source";
 import { api } from "../lib/api";
 import { cachedVideoCourse, defaultCourse, rememberCourse, type Course } from "../lib/courses";
+import { BookmarkButton, CitationChip, MediaViewer, QuizCard, RevisionNotes, RevisionQueue, type EvidenceCitation } from "./LearningFeatures";
 
 const hasVideoNotes = (course?: Course) => course?.description?.startsWith("AI video notes · Gemini") ?? false;
 const videoReadyStatus = (course: Course) => hasVideoNotes(course)
   ? "Video attached. Play it, then ask a question. The guide detects the spoken language automatically and analyzes up to five watched minutes. AI notes are approximate; summaries cover analyzed sections only."
   : "Transcript ready. Play the video, then ask about what you have watched.";
 
-type Citation = { label: string; source_type: string; seek_seconds: number | null; resource_name: string };
-type Message = { role: "user" | "assistant"; content: string; citations?: Citation[]; refusal_reason?: string | null; video_time_seconds: number; response_language?: string };
+type Citation = EvidenceCitation;
+type Message = { role: "user" | "assistant"; content: string; citations?: Citation[]; refusal_reason?: string | null; general_knowledge_available?: boolean; video_time_seconds: number; response_language?: string };
 type Scorecard = { overall_score: number; dimensions: { name: string; score: number; evidence: string }[]; strengths: string[]; improvement_areas: string[]; recommendations: string[]; method: string };
 
 function timeLabel(seconds: number) {
@@ -30,9 +31,9 @@ export default function Assistant(props: AssistantProps) {
   return <I18nProvider initialLocale={props.initialUiLocale} initialMessages={props.initialUiMessages}><AssistantWorkspace initialCourses={props.initialCourses} preferredCourseId={props.preferredCourseId} /></I18nProvider>;
 }
 function AssistantWorkspace({ initialCourses, preferredCourseId }: { initialCourses: Course[]; preferredCourseId?: string }) {
-  const { t, locale, chooseLocale, changingLocale, localeError, languageName, errorText, citationLabel } = useI18n();
+  const { t, locale, chooseLocale, changingLocale, localeError, languageName, errorText } = useI18n();
   const initialCourse = defaultCourse(initialCourses, preferredCourseId);
-  const [tab, setTab] = useState<"learn" | "interview">("learn");
+  const [tab, setTab] = useState<"learn" | "interview" | "revision">("learn");
   const [courses, setCourses] = useState<Course[]>(initialCourses);
   const [courseId, setCourseId] = useState(initialCourse?.id || "");
   const [sessionId, setSessionId] = useState("");
@@ -53,6 +54,10 @@ function AssistantWorkspace({ initialCourses, preferredCourseId }: { initialCour
   const [notice, setNotice] = useState<UiText>("");
   const [file, setFile] = useState<File | null>(null);
   const playerRef = useRef<LessonPlayerHandle>(null);
+  const [mediaCitation, setMediaCitation] = useState<Citation | null>(null);
+  const [quizOpen, setQuizOpen] = useState(false);
+  const [quizTopic, setQuizTopic] = useState("");
+  const [revisionRefresh, setRevisionRefresh] = useState(0);
   const [videoDraft, setVideoDraft] = useState(videoUrl);
   const [videoDuration, setVideoDuration] = useState(initialCourse?.video_url ? 0 : 2040);
   const [newCourseTitle, setNewCourseTitle] = useState("");
@@ -116,7 +121,7 @@ function AssistantWorkspace({ initialCourses, preferredCourseId }: { initialCour
     return () => { active = false; };
   }, [startSession, initialCourses, preferredCourseId]);
 
-  async function ask(text: string, action = "answer") {
+  async function ask(text: string, action = "answer", generalKnowledge = false) {
     if (!courseId || !text.trim() || loading || importing) return;
     setLoading(true);
     setNotice("");
@@ -127,12 +132,12 @@ function AssistantWorkspace({ initialCourses, preferredCourseId }: { initialCour
     setMessages((items) => [...items, { role: "user", content: currentQuestion, video_time_seconds: askedAt }]);
     setQuestion("");
     try {
-      const result = await api<{ session_id: string; answer: string; citations: Citation[]; refusal_reason?: string | null }>("v1/learning/ask", {
+      const result = await api<{ session_id: string; answer: string; citations: Citation[]; refusal_reason?: string | null; general_knowledge_available?: boolean }>("v1/learning/ask", {
         method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ course_id: courseId, session_id: sessionId || null, question: currentQuestion, video_time_seconds: askedAt, action, response_language: answerLanguage }),
+        body: JSON.stringify({ course_id: courseId, session_id: sessionId || null, question: currentQuestion, video_time_seconds: askedAt, action, response_language: answerLanguage, general_knowledge: generalKnowledge }),
       });
       setSessionId(result.session_id);
-      setMessages((items) => [...items, { role: "assistant", content: result.answer, citations: result.citations, refusal_reason: result.refusal_reason, video_time_seconds: askedAt, response_language: answerLanguage }]);
+      setMessages((items) => [...items, { role: "assistant", content: result.answer, citations: result.citations, refusal_reason: result.refusal_reason, general_knowledge_available: result.general_knowledge_available, video_time_seconds: askedAt, response_language: answerLanguage }]);
     } catch (error) {
       setNotice(errorText(error, "Could not get an answer."));
       setQuestion(currentQuestion);
@@ -151,6 +156,13 @@ function AssistantWorkspace({ initialCourses, preferredCourseId }: { initialCour
     if (seconds === null) return;
     setVideoSeconds(seconds);
     playerRef.current?.seekTo(seconds);
+  }
+
+  function openCitation(citation: Citation) {
+    if (citation.source_type === "video") {
+      const seconds = citation.start_seconds ?? citation.seek_seconds;
+      if (seconds !== null && seconds !== undefined) { setMediaCitation(null); setVideoSeconds(seconds); playerRef.current?.playAt(seconds); }
+    } else setMediaCitation(citation);
   }
 
   async function selectCourse(id: string) {
@@ -343,6 +355,7 @@ function AssistantWorkspace({ initialCourses, preferredCourseId }: { initialCour
       <nav className="workspace-tabs" aria-label={t("Workspace")}>
         <button className={tab === "learn" ? "tab active" : "tab"} onClick={() => setTab("learn")}><span>▤</span> {" "}{t("Learning room")}</button>
         <button className={tab === "interview" ? "tab active" : "tab"} onClick={() => setTab("interview")}><span>✳</span> {" "}{t("Mock interview")}{" "}<span className="new-pill">{"2X"}</span></button>
+        <button className={tab === "revision" ? "tab active" : "tab"} onClick={() => setTab("revision")}>↻ Revision</button>
       </nav>
 
       {localeError && <div className="notice" role="alert">{t("Could not load this language. Please try again.")}</div>}
@@ -357,7 +370,7 @@ function AssistantWorkspace({ initialCourses, preferredCourseId }: { initialCour
             </select>
           </div>
           <div className="video-card">
-            <LessonPlayer key={videoUrl} ref={playerRef} url={videoUrl} initialTime={videoSeconds} onTimeChange={setVideoSeconds} onDurationChange={setVideoDuration} />
+            {mediaCitation ? <MediaViewer courseId={courseId} citation={mediaCitation} onClose={() => setMediaCitation(null)} /> : <LessonPlayer key={videoUrl} ref={playerRef} url={videoUrl} initialTime={videoSeconds} onTimeChange={setVideoSeconds} onDurationChange={setVideoDuration} />}
             <div className="video-controls-extra">
               <div className="video-title"><span className="video-icon">▶</span><div><strong>{courses.find((item) => item.id === courseId)?.title || t("Lesson")}</strong><small>{videoUrl ? t("Video lesson · timestamp-aware answers") : t("Sample transcript · no video required")}</small></div></div>
               <div className="time-display">{timeLabel(videoSeconds)} <span className="time-divider">/</span> {videoDuration ? timeLabel(videoDuration) : "—"}</div>
@@ -386,17 +399,18 @@ function AssistantWorkspace({ initialCourses, preferredCourseId }: { initialCour
             {messages.map((message, index) => <article className={`message ${message.role}`} key={`${index}-${message.role}`}>
               <div className="message-avatar">{message.role === "assistant" ? "✳" : "A"}</div>
               <div className="message-body"><div className="message-label">{message.role === "assistant" ? t("YOUR LEARNING GUIDE") : t("YOU")} {" "}{t("· at")}{" "}{timeLabel(message.video_time_seconds)}</div><p dir={message.role === "assistant" ? answerDirection(message.response_language) : "auto"} lang={message.response_language && message.response_language !== "auto" ? message.response_language : undefined}>{message.role === "user" ? t(message.content) : message.content}</p>
-                {!!message.citations?.length && <div className="citations"><span className="citation-label">{t("SOURCES")}</span>{message.citations.map((citation) => <button key={citation.label} className="citation" onClick={() => seekTo(citation.seek_seconds)} title={citation.seek_seconds === null ? citationLabel(citation.label) : t("Seek to {time}", {time: timeLabel(citation.seek_seconds)})}><span>↗</span>{citationLabel(citation.label)}</button>)}</div>}
+                {!!message.citations?.length && <div className="citations"><span className="citation-label">{t("SOURCES")}</span>{message.citations.map((citation, citeIndex) => <span key={`${citation.label}-${citeIndex}`}><CitationChip citation={citation} onClick={openCitation} /><BookmarkButton courseId={courseId} citation={citation} explanation={message.role === "assistant" ? message.content : ""} /></span>)}</div>}
+                {message.general_knowledge_available && <div className="knowledge-choice"><small>Not found in uploaded material. Want a general answer?</small><button className="button-secondary" onClick={() => { const original = messages[index - 1]; setMessages((items) => items.map((item, i) => i === index ? { ...item, general_knowledge_available: false } : item)); if (original?.role === "user") void ask(original.content, "answer", true); }}>Yes, explain generally</button><button className="button-secondary" onClick={() => setMessages((items) => items.map((item, i) => i === index ? { ...item, general_knowledge_available: false } : item))}>No</button></div>}
                 {message.refusal_reason && <div className="refusal-tag">{message.refusal_reason === "future_video_content" ? t("AHEAD IN THIS LESSON") : t("COURSE SOURCES CHECKED")}</div>}
               </div>
             </article>)}
             {loading && <div className="typing"><span /><span /><span /> {" "}{t("Understanding your lesson…")}</div>}
           </div>
-          <div className="quick-actions"><span>{t("QUICK ACTIONS")}</span><button disabled={!courseId || importing || loading} onClick={() => ask("Explain the idea in simpler words", "simplify")}>{t("Simplify")}</button><button disabled={!courseId || importing || loading} onClick={() => ask("Give me a practical example", "example")}>{t("Example")}</button><button disabled={!courseId || importing || loading} onClick={() => ask("Summarize what I have learned so far", "summary")}>{t("Summarize so far")}</button><button disabled={!courseId || importing || loading} onClick={() => ask("Quiz me on concepts covered so far", "quiz")}>{t("Quiz me")}</button><button disabled={!courseId || importing || loading} onClick={() => ask("Where was this discussed?", "where")}>{t("Where is this?")}</button><button disabled={!courseId || importing || loading} onClick={() => ask("Compare the concepts covered so far", "compare")}>{t("Compare concepts")}</button></div>
+          <div className="quick-actions"><span>{t("QUICK ACTIONS")}</span><button disabled={!courseId || importing || loading} onClick={() => ask("Explain the idea in simpler words", "simplify")}>{t("Simplify")}</button><button disabled={!courseId || importing || loading} onClick={() => ask("Give me a practical example", "example")}>{t("Example")}</button><button disabled={!courseId || importing || loading} onClick={() => ask("Summarize what I have learned so far", "summary")}>{t("Summarize so far")}</button><button disabled={!courseId || importing || loading} onClick={() => { setQuizTopic(""); setQuizOpen(true); }}>{t("Quiz me")}</button><button disabled={!courseId || importing || loading} onClick={() => ask("Where was this discussed?", "where")}>{t("Where is this?")}</button><button disabled={!courseId || importing || loading} onClick={() => ask("Compare the concepts covered so far", "compare")}>{t("Compare concepts")}</button></div>
           <form className="composer" onSubmit={submitQuestion}><textarea disabled={!courseId || importing} value={question} onChange={(event) => setQuestion(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void ask(question); } }} placeholder={t("Ask about what you’re learning…")} maxLength={1800} rows={2} /><div className="composer-footer"><span>{t("Enter to send · Shift + Enter for a new line")}</span><button className="send-button" disabled={!question.trim() || !courseId || loading || importing} aria-label={t("Send question")}>↑</button></div></form>
           <div className="chat-disclaimer">{t("Answers use retrieved course passages and may need your judgement.")}</div>
         </aside>
-      </section> : <section className="interview-layout">
+      </section> : tab === "interview" ? <section className="interview-layout">
         <div className="interview-intro"><p className="eyebrow">{t("PRACTICE WITH PURPOSE")}</p><h2>{t("A conversation that adapts to you.")}</h2><p>{t("Bring your resume and the role you want. Your interviewer will follow up on your answers, then give you a clear, evidence-based scorecard.")}</p><div className="interview-steps"><div><span>01</span><strong>{t("Personalize")}</strong><small>{t("Role, resume and job description")}</small></div><div><span>02</span><strong>{t("Practice")}</strong><small>{t("One question at a time")}</small></div><div><span>03</span><strong>{t("Improve")}</strong><small>{t("Review strengths and next steps")}</small></div></div><div className="estimate-card"><div><span className="estimate-icon">◷</span><strong>{t("Estimated interview cost")}</strong></div><p>{t(costEstimate)}</p><small>{t("Planning estimate based on current provider settings; actual use varies.")}</small></div></div>
         <div className="interview-panel">
           {!interviewId ? <><div className="card-heading"><div><p className="eyebrow">{t("SET UP YOUR SESSION")}</p><h3>{t("Make it yours")}</h3></div><span className="secure-note">{t("PRACTICE SESSION")}</span></div>
@@ -411,7 +425,9 @@ function AssistantWorkspace({ initialCourses, preferredCourseId }: { initialCour
             {!scorecard ? <form className="interview-answer" onSubmit={submitInterviewAnswer}><textarea rows={3} value={interviewAnswer} onChange={(event) => setInterviewAnswer(event.target.value)} placeholder={t("Take a moment, then share your answer…")} maxLength={5000} /><button className="button-primary" disabled={!interviewAnswer.trim() || loading}>{t("Send answer")}{" "}<span>↑</span></button></form> : <div className="scorecard"><div className="score-summary"><span className="score-number">{scorecard.overall_score}</span><div><p className="eyebrow">{t("PRACTICE SCORE")}</p><strong>{t("Overall reflection")}</strong><small>{t(scorecard.method)}</small></div></div><div className="score-dimensions">{scorecard.dimensions.map((item) => <div key={item.name}><div><strong>{t(item.name)}</strong><b>{item.score}</b></div><div className="score-track"><i style={{ width: `${item.score}%` }} /></div><small>{t(item.evidence)}</small></div>)}</div><div className="score-columns"><div><strong>{t("Strengths")}</strong>{scorecard.strengths.map((item) => <p key={item}>✓ {t(item)}</p>)}</div><div><strong>{t("Next to practice")}</strong>{scorecard.improvement_areas.map((item) => <p key={item}>↗ {t(item)}</p>)}</div></div><button className="button-secondary" onClick={() => { setInterviewId(""); setInterviewTurns([]); setScorecard(null); }}>{t("Start another practice")}</button></div>}
           </>}
         </div>
-      </section>}
+      </section> : <section className="revision-layout"><RevisionQueue courseId={courseId} refreshKey={revisionRefresh} onQuiz={(topic) => { setQuizTopic(topic); setQuizOpen(true); }} onCitation={openCitation} /><RevisionNotes courseId={courseId} onCitation={openCitation} /></section>}
+
+      <QuizCard courseId={courseId} seconds={videoSeconds} topic={quizTopic || undefined} open={quizOpen} onClose={() => { setQuizOpen(false); setRevisionRefresh((key) => key + 1); }} onCitation={openCitation} />
 
       <footer className="footer"><span>{"LEARNFLOW"}{" "}<i>✳</i></span><span>{t("Watch · Ask · Understand · Practice")}</span><span>{t("Built for curious minds")}</span></footer>
     </main>

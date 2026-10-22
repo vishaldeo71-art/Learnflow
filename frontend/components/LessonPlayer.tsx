@@ -5,7 +5,7 @@ import { useI18n } from "./I18nProvider";
 import { resolvePlayhead } from "../lib/playhead";
 import { parseVideoSource } from "../lib/video-source";
 
-type YTPlayer = { getCurrentTime(): number; getDuration(): number; seekTo(seconds: number, allowSeekAhead: boolean): void; destroy(): void };
+type YTPlayer = { getCurrentTime(): number; getDuration(): number; seekTo(seconds: number, allowSeekAhead: boolean): void; playVideo(): void; destroy(): void };
 type YTApi = { Player: new (element: HTMLElement, options: {
   videoId: string; width: string; height: string; playerVars: Record<string, string | number>;
   events: { onReady(event: { target: YTPlayer }): void; onError(event: { data: number }): void };
@@ -32,7 +32,7 @@ function loadYouTube(): Promise<YTApi> {
   return apiPromise;
 }
 
-export type LessonPlayerHandle = { seekTo(seconds: number): void; getCurrentTime(): number | null };
+export type LessonPlayerHandle = { seekTo(seconds: number): void; playAt(seconds: number): void; getCurrentTime(): number | null };
 type Props = { url: string; initialTime: number; onTimeChange(seconds: number): void; onDurationChange(seconds: number): void };
 
 const LessonPlayer = forwardRef<LessonPlayerHandle, Props>(function LessonPlayer({ url, initialTime, onTimeChange, onDurationChange }, ref) {
@@ -44,6 +44,7 @@ const LessonPlayer = forwardRef<LessonPlayerHandle, Props>(function LessonPlayer
   const youtube = useRef<YTPlayer | null>(null);
   const ready = useRef(false);
   const pendingSeek = useRef(initialTime);
+  const pendingPlay = useRef(false);
   const seekDeadline = useRef(0);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(Boolean(url));
@@ -54,6 +55,13 @@ const LessonPlayer = forwardRef<LessonPlayerHandle, Props>(function LessonPlayer
       seekDeadline.current = Date.now() + 5000;
       if (youtube.current && ready.current) youtube.current.seekTo(seconds, true);
       else if (native.current && native.current.readyState >= 1) native.current.currentTime = seconds;
+    },
+    playAt(seconds) {
+      pendingSeek.current = seconds;
+      seekDeadline.current = Date.now() + 5000;
+      pendingPlay.current = true;
+      if (youtube.current && ready.current) { youtube.current.seekTo(seconds, true); youtube.current.playVideo(); pendingPlay.current = false; }
+      else if (native.current && native.current.readyState >= 1) { native.current.currentTime = seconds; void native.current.play().catch(() => {}); pendingPlay.current = false; }
     },
     getCurrentTime() {
       if (youtube.current && ready.current) return resolvePlayhead(youtube.current.getCurrentTime(), pendingSeek.current, seekDeadline.current);
@@ -80,6 +88,7 @@ const LessonPlayer = forwardRef<LessonPlayerHandle, Props>(function LessonPlayer
             ready.current = true;
             setLoading(false);
             if (pendingSeek.current) target.seekTo(pendingSeek.current, true);
+            if (pendingPlay.current) { target.playVideo(); pendingPlay.current = false; }
             const update = () => {
               const time = target.getCurrentTime();
               const duration = target.getDuration();
@@ -109,7 +118,7 @@ const LessonPlayer = forwardRef<LessonPlayerHandle, Props>(function LessonPlayer
   return <div className="video-stage">
     {source.kind === "youtube" && <div className="youtube-player" ref={host} />}
     {source.kind === "file" && <video ref={native} src={source.url} lang={locale} controls playsInline aria-label={t("Course video player")}
-      onLoadedMetadata={(event) => { setLoading(false); const video = event.currentTarget; if (Number.isFinite(video.duration)) onDurationChange(Math.floor(video.duration)); video.currentTime = pendingSeek.current; }}
+      onLoadedMetadata={(event) => { setLoading(false); const video = event.currentTarget; if (Number.isFinite(video.duration)) onDurationChange(Math.floor(video.duration)); video.currentTime = pendingSeek.current; if (pendingPlay.current) { void video.play().catch(() => {}); pendingPlay.current = false; } }}
       onTimeUpdate={(event) => onTimeChange(Math.floor(event.currentTarget.currentTime))}
       onError={() => { setLoading(false); setError("This link is not a playable video file. Use a YouTube link or a direct MP4/WebM URL."); }} />}
     {source.kind === "empty" && <div className="video-empty"><span className="play-orb">▶</span><strong>{t("Sample transcript demo")}</strong><span>{t("Use the timeline without a video, or load a YouTube or direct video link below.")}</span></div>}

@@ -26,9 +26,14 @@ def citation_for(chunk: dict[str, Any]) -> dict[str, Any]:
     if kind == "video":
         start = chunk.get("start_time")
         end = chunk.get("end_time")
-        prefix = "AI video notes (approximate)" if (chunk.get("resource_name") or "").startswith("AI video notes") else "Video"
-        label = f"{prefix} {format_time(start)}-{format_time(end)}"
-        seek_seconds = int(start or 0)
+        if start is None:
+            # Never turn missing transcript timing into a false 00:00 citation.
+            label = f"{chunk.get('resource_name') or 'Video'} · timestamp unavailable"
+            seek_seconds = None
+        else:
+            prefix = "AI video notes (approximate)" if (chunk.get("resource_name") or "").startswith("AI video notes") else "Video"
+            label = f"{prefix} {format_time(start)}-{format_time(end)}"
+            seek_seconds = int(start)
     elif kind == "pdf":
         page = chunk.get("page_number")
         label = f"{chunk.get('resource_name', 'PDF')} · page {page}"
@@ -40,7 +45,15 @@ def citation_for(chunk: dict[str, Any]) -> dict[str, Any]:
     else:
         label = chunk.get("resource_name", "Course notes")
         seek_seconds = None
-    return {"label": label, "source_type": kind, "seek_seconds": seek_seconds, "resource_name": chunk.get("resource_name")}
+    return {
+        "label": label, "source_type": kind, "type": kind,
+        "source_id": str(chunk.get("resource_id") or chunk.get("source_id") or ""),
+        "chunk_id": str(chunk.get("id") or ""),
+        "seek_seconds": seek_seconds,
+        "start_seconds": chunk.get("start_time"), "end_seconds": chunk.get("end_time"),
+        "page": chunk.get("page_number"), "slide": chunk.get("slide_number"),
+        "resource_name": chunk.get("resource_name"), "quote": str(chunk.get("content", ""))[:700],
+    }
 
 
 class Retriever:

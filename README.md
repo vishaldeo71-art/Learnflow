@@ -15,6 +15,8 @@ Timestamp-aware course Q&A plus a personalized mock interview, built as a Next.j
 - Hybrid retrieval in Supabase PostgreSQL using pgvector and full-text search, rank fusion, a small reranker, and a hard `end_time <= T` database predicate before prompt construction.
 - Future-content detector that returns metadata only, and clear refusal for future-only or unsupported questions.
 - Conversation history and actions: simplify, example, where discussed, summarize so far, quiz, compare and follow-up.
+- Clickable evidence chips that seek/play timestamped video citations and open extracted PDF page/PPT slide passages in place; saved evidence bookmarks with the related explanation.
+- Five-question adaptive quizzes, server-recorded answers, weak-topic tracking, a transparent revision-priority queue, and editable/searchable revision notes with Markdown/PDF export.
 - Resume/JD text extraction, personalized follow-up interview turns, explainable practice scorecard and estimated cost for 10/20/30 minute sessions.
 - Gemini, OpenAI, and Bedrock provider adapters; local feature-hash embeddings and a deterministic mock model for offline demos.
 - Supabase migration, local/container configs, Vercel and Render deployment files, AWS alternative, API docs, architecture diagram, evaluation cases, results template, demo script and optional n8n ingestion notes.
@@ -88,7 +90,7 @@ The checked local Gemini configuration uses `gemini-3.5-flash-lite`. Bedrock use
 
 ## Use Supabase storage
 
-1. Create a Supabase project and run [`backend/migrations/001_init.sql`](backend/migrations/001_init.sql) and [`backend/migrations/002_course_video.sql`](backend/migrations/002_course_video.sql) in its SQL editor.
+1. Create a Supabase project and run [`backend/migrations/001_init.sql`](backend/migrations/001_init.sql), [`backend/migrations/002_course_video.sql`](backend/migrations/002_course_video.sql), and [`backend/migrations/003_learning_features.sql`](backend/migrations/003_learning_features.sql) in its SQL editor.
 2. Set the project PostgreSQL connection string in `DATABASE_URL`. Use an SSL-enabled server-side connection string; never put it in a `NEXT_PUBLIC_*` variable.
 3. Set `APP_API_KEY` to a long random secret. The Next.js server-side proxy forwards it from `BACKEND_API_KEY`; set both to the same value. Keep both out of browser-exposed variables.
 4. Start the API. It will seed the sample course only when the database has no courses. Uploaded resource names replace their old chunks on re-ingest.
@@ -106,6 +108,8 @@ FastAPI serves interactive docs at `http://localhost:8000/docs` and OpenAPI at `
 - `POST /api/v1/interviews`, `POST /api/v1/interviews/{id}/turn`, `POST /api/v1/interviews/{id}/complete`
 
 Request examples and response schemas are in [`docs/API.md`](docs/API.md).
+
+Architecture, learner feature routes/data models, exact model prompts and JSON schemas, persistence setup, and the 3-minute demo flow are in [`docs/LEARNING_FEATURES.md`](docs/LEARNING_FEATURES.md). The PDF/PPT source viewer currently displays the extracted page/slide text and highlights the cited passage; it does not render uploaded original artwork, because uploaded binary files are not retained.
 
 ## Verify and evaluate
 

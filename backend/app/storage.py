@@ -3,6 +3,7 @@
 import json
 import uuid
 from collections import defaultdict
+from datetime import datetime, timezone
 from typing import Any
 
 from .domain import Chunk, Interview
@@ -19,6 +20,11 @@ class MemoryStore:
         self.session_courses: dict[str, str] = {}
         self.interviews: dict[str, Interview] = {}
         self.resources: dict[str, dict[str, Any]] = {}
+        self.bookmarks: dict[str, dict[str, Any]] = {}
+        self.quizzes: dict[str, dict[str, Any]] = {}
+        self.quiz_attempts: list[dict[str, Any]] = []
+        self.topic_reviews: dict[tuple[str, str], dict[str, Any]] = {}
+        self.revision_notes: dict[str, dict[str, Any]] = {}
 
     async def close(self):
         return None
@@ -82,6 +88,78 @@ class MemoryStore:
         recent = rows[-24:]
         earlier = rows[:-24]
         return [earlier[int(index * len(earlier) / (limit - 24))] for index in range(limit - 24)] + recent
+
+    async def get_location_chunks(self, course_id: str, source_id: str, source_type: str, location: int) -> list[dict[str, Any]]:
+        matches = [chunk.public_dict() for chunk in self.chunks.get(course_id, [])
+                   if chunk.resource_id == source_id and chunk.source_type == source_type and
+                   ((source_type == "video" and chunk.start_time is not None and chunk.end_time is not None and chunk.start_time <= location <= chunk.end_time) or
+                    (source_type == "pdf" and chunk.page_number == location) or
+                    (source_type == "ppt" and chunk.slide_number == location))]
+        return matches
+
+    async def save_bookmark(self, bookmark: dict[str, Any]) -> dict[str, Any]:
+        saved = {"id": bookmark.get("id") or str(uuid.uuid4()), **bookmark}
+        self.bookmarks[saved["id"]] = saved
+        return saved
+
+    async def list_bookmarks(self, course_id: str) -> list[dict[str, Any]]:
+        return sorted((row.copy() for row in self.bookmarks.values() if row["course_id"] == course_id), key=lambda row: row["created_at"], reverse=True)
+
+    async def update_bookmark(self, bookmark_id: str, course_id: str, changes: dict[str, Any]) -> dict[str, Any] | None:
+        item = self.bookmarks.get(bookmark_id)
+        if not item or item["course_id"] != course_id:
+            return None
+        item.update(changes)
+        return item.copy()
+
+    async def delete_bookmark(self, bookmark_id: str, course_id: str) -> bool:
+        item = self.bookmarks.get(bookmark_id)
+        if not item or item["course_id"] != course_id:
+            return False
+        del self.bookmarks[bookmark_id]
+        return True
+
+    async def create_quiz(self, course_id: str, video_time_seconds: int, questions: list[dict[str, Any]]) -> dict[str, Any]:
+        quiz = {"id": str(uuid.uuid4()), "course_id": course_id, "video_time_seconds": video_time_seconds, "questions": questions}
+        self.quizzes[quiz["id"]] = quiz
+        return quiz
+
+    async def get_quiz(self, quiz_id: str, course_id: str) -> dict[str, Any] | None:
+        quiz = self.quizzes.get(quiz_id)
+        return quiz if quiz and quiz["course_id"] == course_id else None
+
+    async def add_quiz_question(self, quiz_id: str, question: dict[str, Any]) -> None:
+        self.quizzes[quiz_id]["questions"].append(question)
+
+    async def record_quiz_attempt(self, attempt: dict[str, Any]) -> dict[str, Any]:
+        saved = {"id": str(uuid.uuid4()), "created_at": now_utc(), **attempt}
+        self.quiz_attempts.append(saved)
+        return saved
+
+    async def get_feature_data(self, course_id: str) -> dict[str, Any]:
+        return {
+            "bookmarks": await self.list_bookmarks(course_id),
+            "attempts": [row.copy() for row in self.quiz_attempts if row["course_id"] == course_id],
+            "reviews": [row.copy() for (cid, _), row in self.topic_reviews.items() if cid == course_id],
+            "notes": [row.copy() for row in self.revision_notes.values() if row["course_id"] == course_id],
+        }
+
+    async def mark_revised(self, course_id: str, topic: str) -> dict[str, Any]:
+        row = {"course_id": course_id, "topic": topic, "last_reviewed": now_utc()}
+        self.topic_reviews[(course_id, topic.casefold())] = row
+        return row
+
+    async def save_revision_note(self, note: dict[str, Any]) -> dict[str, Any]:
+        saved = {"id": note.get("id") or str(uuid.uuid4()), "updated_at": now_utc(), **note}
+        self.revision_notes[saved["id"]] = saved
+        return saved
+
+    async def delete_revision_note(self, note_id: str, course_id: str) -> bool:
+        note = self.revision_notes.get(note_id)
+        if not note or note["course_id"] != course_id:
+            return False
+        del self.revision_notes[note_id]
+        return True
 
     async def future_match(self, course_id: str, query: str, embedding: list[float], current_time: int) -> dict[str, Any] | None:
         query_tokens = set(tokens(query))
@@ -178,7 +256,7 @@ class PostgresStore:
 
     async def search_chunks(self, course_id: str, query: str, embedding: list[float], current_time: int, limit: int) -> list[dict[str, Any]]:
         rows = await self.pool.fetch(
-            """SELECT s.*, (1-(c.embedding OPERATOR(extensions.<=>) $2::text::extensions.vector))::real AS semantic_score
+            """SELECT s.*, c.resource_id::text AS resource_id, (1-(c.embedding OPERATOR(extensions.<=>) $2::text::extensions.vector))::real AS semantic_score
                FROM search_course_chunks($1::uuid,$2::text::extensions.vector,$3,$4,$5) s
                JOIN chunks c ON c.id=s.id""",
             course_id, _vector_literal(embedding), query, current_time, limit,
@@ -187,7 +265,7 @@ class PostgresStore:
 
     async def covered_chunks(self, course_id: str, current_time: int, limit: int = 8) -> list[dict[str, Any]]:
         rows = await self.pool.fetch(
-            """SELECT id,content,source_type,resource_name,start_time,end_time,page_number,slide_number,1.0::real AS score
+            """SELECT id::text,resource_id::text,course_id::text,content,source_type,resource_name,start_time,end_time,page_number,slide_number,1.0::real AS score
                FROM chunks WHERE course_id=$1::uuid AND (source_type <> 'video' OR end_time <= $2)
                ORDER BY CASE WHEN source_type='video' THEN 0 ELSE 1 END, end_time DESC NULLS LAST
                LIMIT $3""", course_id, current_time, limit,
@@ -198,7 +276,7 @@ class PostgresStore:
         # Rank only allowed rows. Sample across history and retain the recent section.
         rows = await self.pool.fetch(
             """WITH allowed AS (
-                 SELECT id,content,source_type,resource_name,start_time,end_time,page_number,slide_number,
+                 SELECT id::text,resource_id::text,course_id::text,content,source_type,resource_name,start_time,end_time,page_number,slide_number,
                         row_number() OVER (ORDER BY end_time NULLS FIRST,id) AS n,
                         count(*) OVER () AS total
                  FROM chunks WHERE course_id=$1::uuid AND (source_type <> 'video' OR end_time <= $2)
@@ -207,6 +285,101 @@ class PostgresStore:
                ORDER BY end_time NULLS FIRST LIMIT $3""", course_id, current_time, limit,
         )
         return [dict(row) for row in rows]
+
+    async def get_location_chunks(self, course_id: str, source_id: str, source_type: str, location: int) -> list[dict[str, Any]]:
+        if source_type == "video":
+            predicate, value = "start_time <= $4 AND end_time >= $4", location
+        elif source_type == "pdf":
+            predicate, value = "page_number = $4", location
+        elif source_type == "ppt":
+            predicate, value = "slide_number = $4", location
+        else:
+            return []
+        rows = await self.pool.fetch(
+            f"""SELECT id::text,resource_id::text,course_id::text,source_type,resource_name,content,start_time,end_time,page_number,slide_number
+                FROM chunks WHERE course_id=$1::uuid AND resource_id=$2::uuid AND source_type=$3 AND {predicate}
+                ORDER BY coalesce(start_time,0),id""", course_id, source_id, source_type, value,
+        )
+        return [dict(row) for row in rows]
+
+    async def save_bookmark(self, bookmark: dict[str, Any]) -> dict[str, Any]:
+        row = await self.pool.fetchrow(
+            """INSERT INTO public.bookmarks(course_id,source_id,source_type,resource_name,location,note,saved_explanation,concept_tags)
+               VALUES($1::uuid,$2::uuid,$3,$4,$5::jsonb,$6,$7,$8)
+               RETURNING id::text,course_id::text,source_id::text,source_type,resource_name,location,note,saved_explanation,concept_tags,created_at""",
+            bookmark["course_id"], bookmark.get("source_id"), bookmark["source_type"], bookmark["resource_name"],
+            json.dumps(bookmark.get("location", {})), bookmark.get("note", ""), bookmark.get("saved_explanation", ""), bookmark.get("concept_tags", []),
+        )
+        return _json_row(dict(row))
+
+    async def list_bookmarks(self, course_id: str) -> list[dict[str, Any]]:
+        rows = await self.pool.fetch("""SELECT id::text,course_id::text,source_id::text,source_type,resource_name,location,note,saved_explanation,concept_tags,created_at
+                                         FROM public.bookmarks WHERE course_id=$1::uuid ORDER BY created_at DESC""", course_id)
+        return [_json_row(dict(row)) for row in rows]
+
+    async def update_bookmark(self, bookmark_id: str, course_id: str, changes: dict[str, Any]) -> dict[str, Any] | None:
+        row = await self.pool.fetchrow(
+            """UPDATE public.bookmarks SET note=coalesce($3,note),saved_explanation=coalesce($4,saved_explanation),
+               concept_tags=coalesce($5,concept_tags) WHERE id=$1::uuid AND course_id=$2::uuid
+               RETURNING id::text,course_id::text,source_id::text,source_type,resource_name,location,note,saved_explanation,concept_tags,created_at""",
+            bookmark_id, course_id, changes.get("note"), changes.get("saved_explanation"), changes.get("concept_tags"),
+        )
+        return _json_row(dict(row)) if row else None
+
+    async def delete_bookmark(self, bookmark_id: str, course_id: str) -> bool:
+        result = await self.pool.execute("DELETE FROM public.bookmarks WHERE id=$1::uuid AND course_id=$2::uuid", bookmark_id, course_id)
+        return result.endswith("1")
+
+    async def create_quiz(self, course_id: str, video_time_seconds: int, questions: list[dict[str, Any]]) -> dict[str, Any]:
+        row = await self.pool.fetchrow(
+            """INSERT INTO public.quiz_sets(course_id,video_time_seconds,questions) VALUES($1::uuid,$2,$3::jsonb)
+               RETURNING id::text,course_id::text,video_time_seconds,questions""", course_id, video_time_seconds, json.dumps(questions),
+        )
+        return _json_row(dict(row))
+
+    async def get_quiz(self, quiz_id: str, course_id: str) -> dict[str, Any] | None:
+        row = await self.pool.fetchrow("SELECT id::text,course_id::text,video_time_seconds,questions FROM public.quiz_sets WHERE id=$1::uuid AND course_id=$2::uuid", quiz_id, course_id)
+        return _json_row(dict(row)) if row else None
+
+    async def add_quiz_question(self, quiz_id: str, question: dict[str, Any]) -> None:
+        await self.pool.execute("UPDATE public.quiz_sets SET questions=questions || $2::jsonb WHERE id=$1::uuid", quiz_id, json.dumps([question]))
+
+    async def record_quiz_attempt(self, attempt: dict[str, Any]) -> dict[str, Any]:
+        row = await self.pool.fetchrow(
+            """INSERT INTO public.quiz_attempts(course_id,quiz_id,question_id,topic,correct,difficulty,selected_index,citation)
+               VALUES($1::uuid,$2::uuid,$3,$4,$5,$6,$7,$8::jsonb)
+               RETURNING id::text,course_id::text,quiz_id::text,question_id,topic,correct,difficulty,selected_index,citation,created_at""",
+            attempt["course_id"], attempt["quiz_id"], attempt["question_id"], attempt["topic"], attempt["correct"], attempt["difficulty"], attempt["selected_index"], json.dumps(attempt.get("citation", {})),
+        )
+        return dict(row)
+
+    async def get_feature_data(self, course_id: str) -> dict[str, Any]:
+        bookmarks = await self.list_bookmarks(course_id)
+        attempts = [_json_row(dict(row)) for row in await self.pool.fetch("""SELECT id::text,course_id::text,quiz_id::text,question_id,topic,correct,difficulty,selected_index,citation,created_at
+                                                                    FROM public.quiz_attempts WHERE course_id=$1::uuid ORDER BY created_at""", course_id)]
+        reviews = [dict(row) for row in await self.pool.fetch("SELECT course_id::text,topic,last_reviewed FROM public.topic_reviews WHERE course_id=$1::uuid", course_id)]
+        notes = [_json_row(dict(row)) for row in await self.pool.fetch("""SELECT id::text,course_id::text,topic,summary,key_points,source_refs,updated_at
+                                                                         FROM public.revision_notes WHERE course_id=$1::uuid ORDER BY updated_at DESC""", course_id)]
+        return {"bookmarks": bookmarks, "attempts": attempts, "reviews": reviews, "notes": notes}
+
+    async def mark_revised(self, course_id: str, topic: str) -> dict[str, Any]:
+        row = await self.pool.fetchrow("""INSERT INTO public.topic_reviews(course_id,topic,last_reviewed) VALUES($1::uuid,$2,now())
+            ON CONFLICT(course_id,topic) DO UPDATE SET last_reviewed=now() RETURNING course_id::text,topic,last_reviewed""", course_id, topic)
+        return dict(row)
+
+    async def save_revision_note(self, note: dict[str, Any]) -> dict[str, Any]:
+        row = await self.pool.fetchrow(
+            """INSERT INTO public.revision_notes(id,course_id,topic,summary,key_points,source_refs)
+               VALUES(coalesce($1::uuid,gen_random_uuid()),$2::uuid,$3,$4,$5::jsonb,$6::jsonb)
+               ON CONFLICT(id) DO UPDATE SET topic=EXCLUDED.topic,summary=EXCLUDED.summary,key_points=EXCLUDED.key_points,source_refs=EXCLUDED.source_refs,updated_at=now()
+               RETURNING id::text,course_id::text,topic,summary,key_points,source_refs,updated_at""",
+            note.get("id"), note["course_id"], note["topic"], note["summary"], json.dumps(note.get("key_points", [])), json.dumps(note.get("source_refs", [])),
+        )
+        return _json_row(dict(row))
+
+    async def delete_revision_note(self, note_id: str, course_id: str) -> bool:
+        result = await self.pool.execute("DELETE FROM public.revision_notes WHERE id=$1::uuid AND course_id=$2::uuid", note_id, course_id)
+        return result.endswith("1")
 
     async def future_match(self, course_id: str, query: str, embedding: list[float], current_time: int) -> dict[str, Any] | None:
         row = await self.pool.fetchrow(
@@ -253,3 +426,18 @@ class PostgresStore:
 
 def _vector_literal(vector: list[float]) -> str:
     return "[" + ",".join(f"{value:.8f}" for value in vector) + "]"
+
+
+def now_utc() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _json_row(row: dict[str, Any]) -> dict[str, Any]:
+    for key in ("location", "questions", "key_points", "source_refs", "citation"):
+        value = row.get(key)
+        if isinstance(value, str):
+            try:
+                row[key] = json.loads(value)
+            except json.JSONDecodeError:
+                pass
+    return row

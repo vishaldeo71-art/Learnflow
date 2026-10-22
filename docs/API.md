@@ -17,7 +17,7 @@ Content-Type: application/json
 }
 ```
 
-Response: `session_id`, grounded `answer`, `citations[]`, retrieved chunk count, timestamp, and optional `refusal_reason`. Citation fields are `label`, `source_type`, `seek_seconds`, and `resource_name`.
+Response: `session_id`, grounded `answer`, `citations[]`, retrieved chunk count, timestamp, `confidence`, `knowledge_scope`, and optional `refusal_reason` / `general_knowledge_available`. Citation objects include source id/type, chunk id, video time range or PDF page/PPT slide, resource name, and a short evidence quote. Send `general_knowledge: true` only after the learner opts in; those answers are labeled `Not from your material` and have no course citations.
 
 Valid actions: `answer`, `simplify`, `example`, `where`, `summary`, `quiz`, `compare`. Summary/quiz get a bounded, timestamp-gated context. Follow-ups use recent messages in the same session.
 
@@ -38,6 +38,18 @@ Supported extensions: `.pdf`, `.pptx`, `.vtt`, `.srt`, timestamped `.json`, `.tx
 ## Operational errors
 
 Errors use FastAPI status codes and a concise `detail`. Unexpected errors are logged with a request ID and return a generic message. Common responses: `400` unsupported/invalid file; `401` bad configured bearer token; `404` unknown course/session/interview; `413` upload exceeds `MAX_UPLOAD_MB`; `429` rate limit; `503` startup or model provider unavailable.
+
+## Quizzes, bookmarks and revision
+
+- `POST /api/v1/learning/quiz` JSON `{ "course_id": "...", "video_time_seconds": 120, "topic": null }`; returns five public questions and a quiz id. Video source chunks are restricted to `end_time <= video_time_seconds`.
+- `POST /api/v1/learning/quiz/{quiz_id}/answer` JSON `{ "course_id": "...", "question_id": "...", "selected_index": 1 }`; correctness is checked server-side. Wrong answers include an explanation and source citation; adaptive follow-ups stay on that topic.
+- `GET /api/v1/learning/progress?course_id=...` returns weak topics.
+- `GET /api/v1/learning/revision-queue?course_id=...` returns queue items and formula weights. `POST /api/v1/learning/revision-queue/revised` accepts `{ "course_id": "...", "topic": "..." }`.
+- `GET|POST /api/v1/learning/bookmarks?course_id=...`; `POST` requires `course_id`, `source_id`, `source_type` (`video|pdf|ppt`), `resource_name`, and `location` (`seconds`, `page`, or `slide`). `PATCH|DELETE /api/v1/learning/bookmarks/{bookmark_id}` edits or removes a saved item.
+- `GET /api/v1/courses/{course_id}/resources/{source_id}/location?source_type=pdf&page=14` (or `source_type=ppt&slide=7`) returns extracted passages for the in-place viewer.
+- `GET /api/v1/learning/revision-notes?course_id=...`; `POST /api/v1/learning/revision-notes/generate` accepts `{ "course_id": "..." }`; `PATCH|DELETE /api/v1/learning/revision-notes/{note_id}` manages notes.
+
+Apply `backend/migrations/003_learning_features.sql` after migrations 001 and 002 for durable data. `docs/LEARNING_FEATURES.md` contains the architecture, exact model prompts/schemas, and demo script.
 
 
 ## Automatic YouTube captions

@@ -9,7 +9,7 @@ from typing import Any
 from .domain import Chunk
 from .embeddings import EmbeddingProvider
 
-TIMESTAMP = re.compile(r"(?P<h>\d{2}):(?P<m>\d{2}):(?P<s>\d{2})[,.](?P<ms>\d{3})")
+TIMESTAMP = re.compile(r"(?:(?P<h>\d{2}):)?(?P<m>\d{2}):(?P<s>\d{2})[,.](?P<ms>\d{3})")
 INLINE_TIMESTAMP = re.compile(r"\[(?P<time>\d{1,2}:\d{2}:\d{2})\]\s*")
 
 
@@ -17,7 +17,28 @@ def seconds_from_timestamp(value: str) -> int:
     match = TIMESTAMP.search(value)
     if not match:
         raise ValueError(f"Invalid transcript time: {value}")
-    return int(match["h"]) * 3600 + int(match["m"]) * 60 + int(match["s"])
+    return int(match["h"] or 0) * 3600 + int(match["m"]) * 60 + int(match["s"])
+
+
+def _segment_seconds(row: dict[str, Any], *keys: str) -> int | None:
+    """Accept the common timestamp names emitted by VTT, JSON and caption APIs."""
+    value = next((row.get(key) for key in keys if row.get(key) is not None), None)
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return max(0, int(value))
+    text = str(value).strip()
+    if text.isdigit():
+        return int(text)
+    try:
+        return seconds_from_timestamp(text)
+    except ValueError:
+        # Also allow a plain HH:MM:SS clock without milliseconds.
+        match = re.search(r"(?:(\d{1,2}):)?(\d{1,2}):(\d{2})", text)
+        if not match:
+            return None
+        hours, minutes, seconds = (int(part or 0) for part in match.groups())
+        return hours * 3600 + minutes * 60 + seconds
 
 
 def parse_transcript(text: str) -> list[dict[str, Any]]:
@@ -133,8 +154,8 @@ async def make_chunks(course_id: str, resource_id: str, name: str, source_type: 
                 source_type=source_type,
                 content=part,
                 embedding=[],
-                start_time=int(row["start"]) if row.get("start") is not None else None,
-                end_time=int(row["end"]) if row.get("end") is not None else None,
+                start_time=_segment_seconds(row, "start", "start_seconds", "start_time"),
+                end_time=_segment_seconds(row, "end", "end_seconds", "end_time"),
                 page_number=int(row["page_number"]) if row.get("page_number") is not None else None,
                 slide_number=int(row["slide_number"]) if row.get("slide_number") is not None else None,
             ))
