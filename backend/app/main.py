@@ -566,13 +566,28 @@ async def create_adaptive_quiz(payload: QuizInput, store=Depends(ready_store)):
         start, end = notes_clip_bounds(payload.video_time_seconds)
         name = notes_resource_name(start, end)
         covered = await store.covered_chunks(payload.course_id, end, 120)
-        if not any(row.get("resource_name") == name for row in covered):
+        video_id = video_id_from_url(course["video_url"])
+        captions_name = f"youtube-{video_id}.vtt"
+        has_timestamped_captions = any(
+            row.get("source_type") == "video" and row.get("resource_name") == captions_name
+            for row in covered
+        )
+        if not has_timestamped_captions and not any(row.get("resource_name") == name for row in covered):
             try:
                 imported = await generate_video_notes(course["video_url"], start, end, settings)
                 chunks = await make_chunks(payload.course_id, "", name, "video", imported["rows"], state.embedder)
                 await store.add_resource(payload.course_id, name, "video", chunks)
             except CaptionError as exc:
-                raise HTTPException(status_code=503, detail=str(exc)) from exc
+                # A transient Gemini video-analysis failure should not discard
+                # earlier material already covered by the learner's playhead.
+                logger.warning("Video clip analysis failed for quiz course=%s at=%s: %s", payload.course_id, end, exc)
+                try:
+                    imported = await run_in_threadpool(fetch_captions, video_id)
+                    chunks = await make_chunks(payload.course_id, "", captions_name, "video", imported["rows"], state.embedder)
+                    await store.add_resource(payload.course_id, captions_name, "video", chunks)
+                    has_timestamped_captions = True
+                except CaptionError as caption_exc:
+                    logger.info("YouTube caption fallback unavailable for quiz course=%s: %s", payload.course_id, caption_exc)
     chunks = await store.study_chunks(payload.course_id, payload.video_time_seconds, 120)
     chunks = [chunk for chunk in chunks if str(chunk.get("content", "")).strip()]
     # When a lesson has a linked video, a video quiz must stay with its video
@@ -588,6 +603,15 @@ async def create_adaptive_quiz(payload: QuizInput, store=Depends(ready_store)):
         if filtered:
             chunks = filtered
     if not chunks:
+        if uses_video_notes(course) and payload.video_time_seconds > 0:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "There is no transcript or analyzed video material available up to this point yet. "
+                    "Upload this video's timestamped VTT/SRT transcript under Supporting materials, "
+                    "or retry after video analysis is available."
+                ),
+            )
         raise HTTPException(status_code=409, detail="Add or watch course material before generating a quiz.")
     # Keep the no-topic path blank so the model derives a real concept from the
     # retrieved lesson text instead of treating prompt boilerplate as content.
