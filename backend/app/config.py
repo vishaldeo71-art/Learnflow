@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     app_env: str = "development"
     app_api_key: str | None = None
     database_url: str | None = None
+    supabase_url: str | None = None
+    supabase_publishable_key: str | None = None
     cors_origins: str = "http://localhost:3000"
     rate_limit_requests: int = 60
     rate_limit_window_seconds: int = 60

@@ -14,7 +14,7 @@ class LLMProvider:
     def __init__(self, settings: Settings):
         self.settings = settings
 
-    async def generate(self, system: str, prompt: str, max_tokens: int = 650, *, allow_fallback: bool = True) -> str:
+    async def generate(self, system: str, prompt: str, max_tokens: int = 650, *, allow_fallback: bool = True, structured: bool = False) -> str:
         provider = self.settings.llm_provider.lower()
         if provider == "mock":
             return self._offline_answer(system, prompt)
@@ -28,6 +28,7 @@ class LLMProvider:
                 model=self.settings.llm_model or "gpt-4o-mini",
                 messages=[{"role": "system", "content": system}, {"role": "user", "content": prompt}],
                 max_tokens=max_tokens,
+                **({"response_format":{"type":"json_object"},"temperature":0} if structured else {}),
             )
             return response.choices[0].message.content or ""
         if provider == "gemini":
@@ -43,7 +44,7 @@ class LLMProvider:
                         response = client.models.generate_content(
                             model=self.settings.llm_model or "gemini-3.5-flash-lite",
                             contents=prompt,
-                            config=types.GenerateContentConfig(max_output_tokens=max_tokens, system_instruction=system),
+                            config=types.GenerateContentConfig(max_output_tokens=max_tokens, system_instruction=system, **({"response_mime_type":"application/json","temperature":0} if structured else {})),
                         )
                         return response.text or ""
                     finally:

@@ -14,3 +14,7 @@ dist/
 .vercel/
 .docker-local/
 .env.*.local
+
+# Local CLI cache and private user-facing handoff files
+supabase/.temp/
+/outputs/

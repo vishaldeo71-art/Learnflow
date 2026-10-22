@@ -20,6 +20,8 @@ class MemoryStore:
         self.session_courses: dict[str, str] = {}
         self.interviews: dict[str, Interview] = {}
         self.resources: dict[str, dict[str, Any]] = {}
+        self.session_owners = {}
+        self.interview_owners = {}
         self.bookmarks: dict[str, dict[str, Any]] = {}
         self.quizzes: dict[str, dict[str, Any]] = {}
         self.quiz_attempts: list[dict[str, Any]] = []

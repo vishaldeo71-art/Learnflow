@@ -45,15 +45,8 @@ def citation_for(chunk: dict[str, Any]) -> dict[str, Any]:
     else:
         label = chunk.get("resource_name", "Course notes")
         seek_seconds = None
-    return {
-        "label": label, "source_type": kind, "type": kind,
-        "source_id": str(chunk.get("resource_id") or chunk.get("source_id") or ""),
-        "chunk_id": str(chunk.get("id") or ""),
-        "seek_seconds": seek_seconds,
-        "start_seconds": chunk.get("start_time"), "end_seconds": chunk.get("end_time"),
-        "page": chunk.get("page_number"), "slide": chunk.get("slide_number"),
-        "resource_name": chunk.get("resource_name"), "quote": str(chunk.get("content", ""))[:700],
-    }
+    return {"label":label,"source_type":kind,"type":kind,"seek_seconds":seek_seconds,"source_id":str(chunk.get("resource_id") or chunk.get("source_id") or ""),"chunk_id":str(chunk.get("id") or ""),"resource_id":str(chunk.get("resource_id") or ""),"resource_name":chunk.get("resource_name"),"page_number":chunk.get("page_number"),"slide_number":chunk.get("slide_number"),"page":chunk.get("page_number"),"slide":chunk.get("slide_number"),"start_seconds":chunk.get("start_time"),"end_seconds":chunk.get("end_time"),"quote":chunk.get("content","")[:700],"excerpt":chunk.get("content","")[:3000],"approximate":(chunk.get("resource_name") or "").startswith("AI video notes")}
+
 
 
 class Retriever:

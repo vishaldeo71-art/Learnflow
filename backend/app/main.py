@@ -36,6 +36,10 @@ from .learning_features import (
     fallback_question, topic_for, NOTE_USER_PROMPT_TEMPLATE, NOTE_JSON_SCHEMA,
 )
 from .storage import DEMO_COURSE_ID, MemoryStore, PostgresStore
+from .auth import current_user, verify_identity
+from .scoped_store import ScopedStore
+from .study_store import StudyRepository
+from .study import study_router, json_object
 
 settings = get_settings()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -68,6 +72,7 @@ class AskInput(BaseModel):
     video_time_seconds: int = Field(ge=0, le=86400)
     action: str | None = Field(default=None, max_length=40)
     response_language: str = Field(default="en", max_length=16)
+    allow_broader: bool = False
     general_knowledge: bool = False
 
     @field_validator("response_language")
@@ -193,6 +198,8 @@ async def lifespan(app: FastAPI):
             missing.append("APP_API_KEY")
         if not settings.database_url:
             missing.append("DATABASE_URL")
+        if not settings.supabase_url or not settings.supabase_publishable_key:
+            missing.append("SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY")
         if settings.llm_provider.lower() == "mock":
             missing.append("LLM_PROVIDER (choose gemini, openai, or bedrock)")
         if missing:
@@ -239,8 +246,15 @@ async def secure_api_requests(request: Request, call_next):
             token = supplied.removeprefix("Bearer ")
             if not supplied.startswith("Bearer ") or not hmac.compare_digest(token, expected):
                 return JSONResponse(status_code=401, content={"detail": "Unauthorized", "request_id": request_id})
+        if settings.supabase_url and path not in {"/api/v1/languages", "/api/v1/status"}:
+            try:
+                user = await verify_identity(request.headers.get("x-user-token", ""), settings, StudyRepository(state.store))
+            except HTTPException as exc:
+                return JSONResponse(status_code=exc.status_code,content={"detail":exc.detail})
+            request.state.identity = user
         # In-process fallback limiter; put an edge/API-gateway limiter in front when running multiple replicas.
-        client = request.client.host if request.client else "unknown"
+        identity = getattr(request.state, "identity", None)
+        client = identity.id if identity else (request.client.host if request.client else "unknown")
         now = time.monotonic()
         events = state.rate_events[client]
         while events and now - events[0] > settings.rate_limit_window_seconds:
@@ -248,7 +262,11 @@ async def secure_api_requests(request: Request, call_next):
         if len(events) >= settings.rate_limit_requests:
             return JSONResponse(status_code=429, content={"detail": "Rate limit exceeded", "request_id": request_id}, headers={"Retry-After": str(settings.rate_limit_window_seconds)})
         events.append(now)
-    response = await call_next(request)
+    context_token = current_user.set(getattr(request.state, "identity", None))
+    try:
+        response = await call_next(request)
+    finally:
+        current_user.reset(context_token)
     response.headers["X-Request-ID"] = request_id
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
@@ -266,7 +284,8 @@ async def unexpected_error_handler(request: Request, exc: Exception):
 def ready_store():
     if state.store is None:
         raise HTTPException(status_code=503, detail="Application is starting")
-    return state.store
+    user = current_user.get()
+    return ScopedStore(state.store, user) if user else state.store
 
 
 def check_upload_size(raw: bytes):
@@ -368,13 +387,19 @@ async def import_youtube(payload: YouTubeInput, store=Depends(ready_store)):
 async def ingest_resource(course_id: str, file: UploadFile = File(...), store=Depends(ready_store)):
     if not await store.get_course(course_id):
         raise HTTPException(status_code=404, detail="Course not found")
+    if isinstance(store, ScopedStore):
+        await store.writable_course(course_id)
     filename = Path(file.filename or "upload").name
     raw = await file.read(settings.max_upload_mb * 1024 * 1024 + 1)
     check_upload_size(raw)
     try:
         source_type, rows = await run_in_threadpool(parse_document, filename, raw)
         chunks = await make_chunks(course_id, "", filename, source_type, rows, state.embedder)
-        return await store.add_resource(course_id, filename, source_type, chunks)
+        resource = await store.add_resource(course_id, filename, source_type, chunks)
+        if getattr(store, "pool", None):
+            import mimetypes
+            await store.pool.execute("INSERT INTO resource_files(resource_id,filename,content_type,content) VALUES($1::uuid,$2,$3,$4) ON CONFLICT(resource_id) DO UPDATE SET filename=EXCLUDED.filename,content_type=EXCLUDED.content_type,content=EXCLUDED.content", resource["id"],filename,mimetypes.guess_type(filename)[0] or "application/octet-stream",raw)
+        return resource
     except (ValueError, UnicodeError, json.JSONDecodeError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
@@ -386,6 +411,8 @@ async def ingest_resource(course_id: str, file: UploadFile = File(...), store=De
 async def ingest_pasted_transcript(course_id: str, payload: TranscriptTextInput, store=Depends(ready_store)):
     if not await store.get_course(course_id):
         raise HTTPException(status_code=404, detail="Course not found")
+    if isinstance(store, ScopedStore):
+        await store.writable_course(course_id)
     try:
         rows = await run_in_threadpool(parse_document, "pasted-transcript.txt", payload.text.encode("utf-8"))
         source_type, segments = rows
@@ -407,8 +434,31 @@ async def create_learning_session(payload: SessionInput, store=Depends(ready_sto
     return await store.create_session(payload.course_id)
 
 
+
+
+async def ensure_watched_notes(course, video_time_seconds, store):
+    # Analyze a bounded, already-watched clip. Do not pass the full video to the answer model.
+    if uses_video_notes(course) and video_time_seconds > 0:
+        start, end = notes_clip_bounds(video_time_seconds)
+        name = notes_resource_name(start, end)
+        covered = await store.covered_chunks(course["id"], end, 120)
+        if any(row.get("source_type")=="video" and str(row.get("resource_name","")).startswith("youtube-") for row in covered):
+            return
+        if not any(row.get("resource_name") == name for row in covered):
+            try:
+                imported = await generate_video_notes(course["video_url"], start, end, settings)
+                chunks = await make_chunks(course["id"], "", name, "video", imported["rows"], state.embedder)
+                await store.add_resource(course["id"], name, "video", chunks)
+            except CaptionError as exc:
+                if any(row.get("source_type")=="video" for row in covered):
+                    return
+                raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
 @app.post("/api/v1/learning/ask")
 async def ask(payload: AskInput, store=Depends(ready_store)):
+    if payload.general_knowledge:
+        payload.allow_broader = True
     course = await store.get_course(payload.course_id)
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
@@ -418,19 +468,16 @@ async def ask(payload: AskInput, store=Depends(ready_store)):
         session_id = payload.session_id
     else:
         session_id = (await store.create_session(payload.course_id))["id"]
-    # Analyze a bounded, already-watched clip. Do not pass the full video to the answer model.
-    if uses_video_notes(course) and payload.video_time_seconds > 0:
-        start, end = notes_clip_bounds(payload.video_time_seconds)
-        name = notes_resource_name(start, end)
-        covered = await store.covered_chunks(payload.course_id, end, 40)
-        if not any(row.get("resource_name") == name for row in covered):
-            try:
-                imported = await generate_video_notes(course["video_url"], start, end, settings)
-                chunks = await make_chunks(payload.course_id, "", name, "video", imported["rows"], state.embedder)
-                await store.add_resource(payload.course_id, name, "video", chunks)
-            except CaptionError as exc:
-                raise HTTPException(status_code=503, detail=str(exc)) from exc
+    await ensure_watched_notes(course, payload.video_time_seconds, store)
     history = await store.get_messages(session_id, 8)
+    if payload.allow_broader:
+        previous = next((m for m in reversed(history) if m["role"] == "assistant"), {})
+        meta = previous.get("metadata", {})
+        if meta.get("refusal_reason") != "unsupported_by_resources" or meta.get("question") != payload.question:
+            raise HTTPException(409, "Ask the course guide first before requesting a broader explanation.")
+        answer = await state.llm.generate("Give a concise general educational explanation. Clearly state that this is general knowledge, not verified against the learner's course. Do not invent citations or claim the course covers this. " + language_instruction(payload.response_language), payload.question, allow_fallback=False)
+        message_id = await store.append_message(session_id,"assistant",answer,{"course_id":payload.course_id,"question":payload.question,"answer_mode":"broader","citations":[],"video_time_seconds":payload.video_time_seconds,"response_language":payload.response_language})
+        return {"session_id":session_id,"message_id":message_id,"answer":answer,"citations":[],"answer_mode":"broader","knowledge_scope":"general","general_knowledge_available":False,"response_language":payload.response_language,"video_time_seconds":payload.video_time_seconds,"refusal_reason":None}
     action = (payload.action or "answer").lower()
     if action == "answer" and is_overview_question(payload.question):
         action = "summary"
@@ -454,12 +501,13 @@ async def ask(payload: AskInput, store=Depends(ready_store)):
     except Exception as exc:
         logger.exception("Learning retrieval failed")
         raise HTTPException(status_code=503, detail="The course search service is temporarily unavailable. Please retry in a moment.") from exc
-    confidence = max((float(item.get("semantic_score", item.get("score", 0)) or 0) for item in matches), default=0.0)
-    semantic = settings.embedding_provider.lower() == "gemini"
+    confidence = max((float(item.get("semantic_score", item.get("score", 1)) or 0) for item in matches), default=0.0)
+    semantic = any("semantic_score" in item for item in matches)
     threshold = MIN_SEMANTIC_RETRIEVAL_CONFIDENCE if semantic else MIN_LOCAL_RETRIEVAL_CONFIDENCE
     if confidence < threshold:
         matches = []
     citations = citation_list(matches)
+    concept_note = None
     refusal_reason = None
     knowledge_scope = "course"
     if payload.general_knowledge:
@@ -494,8 +542,10 @@ async def ask(payload: AskInput, store=Depends(ready_store)):
             "compare": "Compare the ideas named in the learner's question only where the sources support the comparison.",
             "answer": "Answer the learner's question directly.",
         }.get(action, "Answer the learner's question directly.")
+        structured = isinstance(store, ScopedStore)
         prompt = "\n".join([
             "GROUNDED_LEARNING_ANSWER",
+            'Return ONLY JSON {"answer":"localized answer using [S1] labels","supported":true,"sources":["S1"],"concept":"localized concept title","revision_note":"short important concept explanation supported by the same sources"}. Set supported=false, sources=[], and revision_note="" if the material cannot answer. Never treat a merely related passage as supporting evidence.' if structured else "",
             f"COURSE: {course['title']}",
             f"LEARNER_VIDEO_POSITION_SECONDS: {payload.video_time_seconds}",
             f"ACTION: {action_guidance}",
@@ -518,6 +568,21 @@ async def ask(payload: AskInput, store=Depends(ready_store)):
         except Exception as exc:
             logger.exception("LLM provider failed")
             raise HTTPException(status_code=503, detail="The configured language model is unavailable. Check provider credentials and retry.") from exc
+        if structured:
+            try:
+                result = json_object(answer)
+                answer = str(result.get("answer", "")).strip()
+                supported_indices = list(dict.fromkeys(int(value[1:])-1 for value in result.get("sources", []) if isinstance(value,str) and __import__("re").fullmatch(r"S[1-9][0-9]*",value) and 1<=int(value[1:])<=len(matches)))
+                if result.get("supported") is not True or not supported_indices:
+                    answer = "I couldn't find support for that in the available course resources at this point, so I don't want to guess."
+                    citations = []
+                    refusal_reason = "unsupported_by_resources"
+                else:
+                    citations = [{**citation_list([matches[i]])[0], "source_label":f"S{i+1}"} for i in supported_indices]
+                    if result.get("revision_note") and result.get("concept"):
+                        concept_note = {"title":str(result["concept"])[:160],"content":str(result["revision_note"])[:4000]}
+            except (ValueError, TypeError, KeyError) as exc:
+                raise HTTPException(503, "The answer could not be verified against its sources. Please retry.") from exc
         if not answer.strip():
             answer = "I couldn't produce a grounded answer from the current course material."
             citations = []
@@ -536,10 +601,19 @@ async def ask(payload: AskInput, store=Depends(ready_store)):
                 raise ValueError("Empty localized status")
         except Exception as exc:
             raise HTTPException(status_code=503, detail="The answer language service is temporarily unavailable. Please retry.") from exc
-    if not payload.general_knowledge:
-        await store.append_message(session_id, "user", payload.question)
+    await store.append_message(session_id, "user", payload.question)
+    message_id = None
+    if isinstance(store, ScopedStore):
+        metadata = {"course_id":payload.course_id,"question":payload.question,"citations":citations,"video_time_seconds":payload.video_time_seconds,"response_language":payload.response_language,"refusal_reason":refusal_reason,"answer_mode":"grounded"}
+        message_id = await store.append_message(session_id,"assistant",answer,metadata)
+        repository = StudyRepository(store)
+        if concept_note and not refusal_reason and (await repository.profile(store.user.id))["auto_notes"]:
+            await repository.insert_item("notes",store.user.id,payload.course_id,{**concept_note,"citations":citations,"video_time_seconds":payload.video_time_seconds,"kind":"concept","response_language":payload.response_language},origin=f"message:{message_id}")
+    else:
         await store.append_message(session_id, "assistant", answer)
     return {
+        "message_id": message_id,
+        "answer_mode": "grounded",
         "session_id": session_id,
         "answer": answer,
         "citations": citations,
@@ -629,13 +703,15 @@ async def create_adaptive_quiz(payload: QuizInput, store=Depends(ready_store)):
     except Exception:
         logger.exception("Quiz persistence unavailable; keeping this quiz in process memory")
         quiz = {"id": str(uuid.uuid4()), "course_id": payload.course_id, "video_time_seconds": payload.video_time_seconds, "questions": questions}
-        volatile_quizzes[quiz["id"]] = quiz
+        volatile_quizzes[quiz["id"]] = {**quiz,"owner_id":current_user.get().id if current_user.get() else "demo"}
     return {"quiz_id": quiz["id"], "questions": [public_question(question) for question in questions]}
 
 
 @app.post("/api/v1/learning/quiz/{quiz_id}/answer")
 async def answer_quiz_question(quiz_id: str, payload: QuizAttemptInput, store=Depends(ready_store)):
     quiz = volatile_quizzes.get(quiz_id)
+    if quiz and quiz.get("owner_id") != (current_user.get().id if current_user.get() else "demo"):
+        quiz = None
     if not quiz:
         quiz = await store.get_quiz(quiz_id, payload.course_id)
     if not quiz:
@@ -653,7 +729,7 @@ async def answer_quiz_question(quiz_id: str, payload: QuizAttemptInput, store=De
         await store.record_quiz_attempt(attempt)
     except Exception:
         logger.exception("Quiz attempt persistence unavailable; keeping this answer in process memory")
-        volatile_quiz_attempts[payload.course_id].append({**attempt, "created_at": datetime.now(timezone.utc).isoformat()})
+        volatile_quiz_attempts[(current_user.get().id if current_user.get() else "demo")+":"+payload.course_id].append({**attempt, "created_at": datetime.now(timezone.utc).isoformat()})
     response: dict[str, Any] = {"correct": correct, "topic": topic, "difficulty": difficulty}
     if not correct:
         response["explanation"] = question.get("explanation", "Review the cited passage and try this concept again.")
@@ -663,7 +739,7 @@ async def answer_quiz_question(quiz_id: str, payload: QuizAttemptInput, store=De
     except Exception:
         logger.exception("Quiz history unavailable; using process-memory answers")
         attempts = []
-    attempts.extend(volatile_quiz_attempts[payload.course_id])
+    attempts.extend(volatile_quiz_attempts[(current_user.get().id if current_user.get() else "demo")+":"+payload.course_id])
     recent = [row for row in attempts if row.get("topic", "").casefold() == topic.casefold()][-2:]
     next_difficulty = max(1, difficulty - 1) if not correct else min(3, difficulty + 1) if len(recent) == 2 and all(item.get("correct") for item in recent) else difficulty
     if not correct or (len(recent) == 2 and all(item.get("correct") for item in recent)):
@@ -683,7 +759,7 @@ async def answer_quiz_question(quiz_id: str, payload: QuizAttemptInput, store=De
             await store.add_quiz_question(quiz_id, adaptive)
         except Exception:
             logger.exception("Adaptive quiz persistence unavailable; keeping the follow-up in process memory")
-            quiz = volatile_quizzes.setdefault(quiz_id, {**quiz, "questions": list(quiz.get("questions", []))})
+            quiz = volatile_quizzes.setdefault(quiz_id, {**quiz,"owner_id":current_user.get().id if current_user.get() else "demo", "questions": list(quiz.get("questions", []))})
             quiz["questions"].append(adaptive)
         response["next_question"] = public_question(adaptive)
     return response
@@ -943,3 +1019,9 @@ async def complete_interview(interview_id: str, store=Depends(ready_store)):
 @app.get("/api/v1/openapi.json", include_in_schema=False)
 async def versioned_openapi():
     return JSONResponse(app.openapi())
+
+
+app.include_router(study_router(ready_store, state, settings, ensure_watched_notes))
+
+from .intelligence import intelligence_router
+app.include_router(intelligence_router(ready_store,state,settings,ensure_watched_notes))
