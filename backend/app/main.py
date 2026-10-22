@@ -161,6 +161,10 @@ class AppState:
 
 
 state = AppState()
+# Keep quiz practice available if the production database has not yet received
+# migration 003. These short-lived records last only for this backend process.
+volatile_quizzes: dict[str, dict[str, Any]] = {}
+volatile_quiz_attempts: dict[str, list[dict[str, Any]]] = defaultdict(list)
 
 
 async def seed_sample_course(store, embedder: EmbeddingProvider) -> None:
@@ -596,13 +600,20 @@ async def create_adaptive_quiz(payload: QuizInput, store=Depends(ready_store)):
         questions = []
     if not questions:
         questions = [fallback_question(chunks[index % len(chunks)], payload.topic or topic_for(chunks[index % len(chunks)].get("content", "")), 2) for index in range(5)]
-    quiz = await store.create_quiz(payload.course_id, payload.video_time_seconds, questions)
+    try:
+        quiz = await store.create_quiz(payload.course_id, payload.video_time_seconds, questions)
+    except Exception:
+        logger.exception("Quiz persistence unavailable; keeping this quiz in process memory")
+        quiz = {"id": str(uuid.uuid4()), "course_id": payload.course_id, "video_time_seconds": payload.video_time_seconds, "questions": questions}
+        volatile_quizzes[quiz["id"]] = quiz
     return {"quiz_id": quiz["id"], "questions": [public_question(question) for question in questions]}
 
 
 @app.post("/api/v1/learning/quiz/{quiz_id}/answer")
 async def answer_quiz_question(quiz_id: str, payload: QuizAttemptInput, store=Depends(ready_store)):
-    quiz = await store.get_quiz(quiz_id, payload.course_id)
+    quiz = volatile_quizzes.get(quiz_id)
+    if not quiz:
+        quiz = await store.get_quiz(quiz_id, payload.course_id)
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
     question = next((row for row in quiz.get("questions", []) if row.get("id") == payload.question_id), None)
@@ -611,14 +622,24 @@ async def answer_quiz_question(quiz_id: str, payload: QuizAttemptInput, store=De
     correct = payload.selected_index == int(question["correct_index"])
     topic = str(question.get("topic") or "Course review")
     difficulty = int(question.get("difficulty") or 2)
-    await store.record_quiz_attempt({"course_id": payload.course_id, "quiz_id": quiz_id, "question_id": payload.question_id,
-                                     "topic": topic, "correct": correct, "difficulty": difficulty,
-                                     "selected_index": payload.selected_index, "citation": question.get("citation", {})})
+    attempt = {"course_id": payload.course_id, "quiz_id": quiz_id, "question_id": payload.question_id,
+               "topic": topic, "correct": correct, "difficulty": difficulty,
+               "selected_index": payload.selected_index, "citation": question.get("citation", {})}
+    try:
+        await store.record_quiz_attempt(attempt)
+    except Exception:
+        logger.exception("Quiz attempt persistence unavailable; keeping this answer in process memory")
+        volatile_quiz_attempts[payload.course_id].append({**attempt, "created_at": datetime.now(timezone.utc).isoformat()})
     response: dict[str, Any] = {"correct": correct, "topic": topic, "difficulty": difficulty}
     if not correct:
         response["explanation"] = question.get("explanation", "Review the cited passage and try this concept again.")
         response["citation"] = question.get("citation")
-    attempts = (await store.get_feature_data(payload.course_id))["attempts"]
+    try:
+        attempts = (await store.get_feature_data(payload.course_id))["attempts"]
+    except Exception:
+        logger.exception("Quiz history unavailable; using process-memory answers")
+        attempts = []
+    attempts.extend(volatile_quiz_attempts[payload.course_id])
     recent = [row for row in attempts if row.get("topic", "").casefold() == topic.casefold()][-2:]
     next_difficulty = max(1, difficulty - 1) if not correct else min(3, difficulty + 1) if len(recent) == 2 and all(item.get("correct") for item in recent) else difficulty
     if not correct or (len(recent) == 2 and all(item.get("correct") for item in recent)):
@@ -634,7 +655,12 @@ async def answer_quiz_question(quiz_id: str, payload: QuizAttemptInput, store=De
             adaptive = adaptive_rows[0]
         except Exception:
             adaptive = fallback_question(chunk, topic, next_difficulty)
-        await store.add_quiz_question(quiz_id, adaptive)
+        try:
+            await store.add_quiz_question(quiz_id, adaptive)
+        except Exception:
+            logger.exception("Adaptive quiz persistence unavailable; keeping the follow-up in process memory")
+            quiz = volatile_quizzes.setdefault(quiz_id, {**quiz, "questions": list(quiz.get("questions", []))})
+            quiz["questions"].append(adaptive)
         response["next_question"] = public_question(adaptive)
     return response
 
