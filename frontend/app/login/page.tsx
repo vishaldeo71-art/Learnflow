@@ -4,11 +4,12 @@ import { authSession, safeNext } from "@/lib/supabase/server";
 import { UI_LANGUAGE_KEY, validUiLocale } from "@/lib/i18n";
 import { loadUiMessages } from "@/lib/i18n-server";
 import AccountForm from "@/components/AccountForm";
+import {accountMode,accountNotice} from "@/lib/auth-notices";
 export const dynamic = "force-dynamic";
 export default async function Login({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; recovery?: string; error?: string }>;
+  searchParams: Promise<{ next?: string; recovery?: string; error?: string; mode?: string; notice?: string }>;
 }) {
   const query = await searchParams;
   const next = safeNext(query.next);
@@ -21,6 +22,8 @@ export default async function Login({
       next={next}
       recovery={query.recovery === "1"}
       confirmationError={!!query.error}
+      initialMode={accountMode(query.mode)}
+      initialNotice={accountNotice(query.notice)}
     />
   );
 }

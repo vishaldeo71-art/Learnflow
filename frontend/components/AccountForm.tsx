@@ -1,5 +1,5 @@
 "use client";
-import { FormEvent, useState } from "react";
+import { useEffect, useState } from "react";
 import { I18nProvider, useI18n } from "./I18nProvider";
 import { ANSWER_LANGUAGES } from "../lib/languages";
 import type { UiMessages } from "../lib/i18n";
@@ -10,6 +10,8 @@ export default function AccountForm(props: {
   next: string;
   recovery: boolean;
   confirmationError: boolean;
+  initialMode?: string;
+  initialNotice?: string;
 }) {
   return (
     <I18nProvider initialLocale={props.locale} initialMessages={props.messages}>
@@ -21,22 +23,31 @@ function Form({
   next,
   recovery,
   confirmationError,
+  initialMode,
+  initialNotice,
 }: {
   next: string;
   recovery: boolean;
   confirmationError: boolean;
+  initialMode?: string;
+  initialNotice?: string;
 }) {
   const { t, locale, chooseLocale, languageName, changingLocale } = useI18n();
-  const [mode, setMode] = useState(recovery ? "password" : "login");
+  const [mode, setMode] = useState(recovery ? "password" : initialMode || "login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    const restore = () => setBusy(false);
+    window.addEventListener("pageshow", restore);
+    return () => window.removeEventListener("pageshow", restore);
+  }, []);
   const [notice, setNotice] = useState(
     confirmationError
       ? "The confirmation link expired. Request a new password reset or try signing in."
-      : "",
+      : initialNotice || "",
   );
   function generatePassword() {
     const values = crypto.getRandomValues(new Uint32Array(24));
@@ -49,37 +60,6 @@ function Form({
     setNotice(
       "Save this generated password in your password manager before continuing.",
     );
-  }
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    setBusy(true);
-    setNotice("");
-    try {
-      const response = await fetch("/auth/action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: mode, email, password, name, next }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error);
-      if (data.confirmation)
-        setNotice("Check your email to confirm your account, then sign in.");
-      else if (data.sent)
-        setNotice(
-          "If an account exists, a password reset link will arrive by email.",
-        );
-      else {
-        window.location.assign(mode === "password" ? "/" : data.next || "/");
-      }
-    } catch (error) {
-      setNotice(
-        error instanceof Error
-          ? error.message
-          : "The account request could not be completed. Please retry later.",
-      );
-    } finally {
-      setBusy(false);
-    }
   }
   return (
     <main className="auth-shell">
@@ -146,12 +126,15 @@ function Form({
               {t(notice)}
             </p>
           )}
-          <form onSubmit={submit} className="account-form">
+          <form action="/auth/action" method="post" onSubmit={() => {setBusy(true); setNotice("");}} className="account-form">
+            <input type="hidden" name="action" value={mode}/>
+            <input type="hidden" name="next" value={next}/>
             {mode === "signup" && (
               <label>
                 {t("Your name")}
                 <input
                   autoComplete="name"
+                  name="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   maxLength={100}
@@ -164,6 +147,7 @@ function Form({
                 {t("Email address")}
                 <input
                   type="email"
+                  name="email"
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -178,6 +162,7 @@ function Form({
                   {t("Password")}
                   <input
                     type={showPassword ? "text" : "password"}
+                    name="password"
                     autoComplete={
                       mode === "login" ? "current-password" : "new-password"
                     }
