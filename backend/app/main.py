@@ -1025,3 +1025,6 @@ app.include_router(study_router(ready_store, state, settings, ensure_watched_not
 
 from .intelligence import intelligence_router
 app.include_router(intelligence_router(ready_store,state,settings,ensure_watched_notes))
+
+from .companion import companion_router
+app.include_router(companion_router(ready_store, state, ask, AskInput))

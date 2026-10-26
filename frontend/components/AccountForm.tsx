@@ -260,6 +260,7 @@ function Form({
           <a href="/admin/setup" className="text-button">
             {t("Administrator setup")}
           </a>
+          <p><a href="/companion" className="text-button">{t("Meet Lumi, your learning companion")}{" ↗"}</a></p>
         </div>
       </section>
     </main>

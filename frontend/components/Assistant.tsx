@@ -10,6 +10,7 @@ import {
 } from "../lib/languages";
 import { I18nProvider, useI18n } from "./I18nProvider";
 import IntelligencePanel from "./IntelligencePanel";
+import LumiCompanion from "./LumiCompanion";
 import StudyPanel from "./StudyPanel";
 import EvidenceSources, { type Evidence } from "./EvidenceSources";
 import LocalizedFileInput from "./LocalizedFileInput";
@@ -1575,6 +1576,11 @@ function AssistantWorkspace({
         <span>{t("Watch · Ask · Understand · Practice")}</span>
         <span>{t("Built for curious minds")}</span>
       </footer>
+      <LumiCompanion courseId={courseId} courseTitle={courses.find(course => course.id === courseId)?.title}
+        videoSeconds={videoSeconds} videoUrl={videoUrl} responseLanguage={responseLanguage} refresh={studyRefresh}
+        getCurrentTime={() => playerRef.current?.getCurrentTime() ?? videoSeconds} onSeek={seekTo}
+        onChanged={() => setStudyRefresh(value => value+1)}
+        onQuiz={() => {setTab("learn"); setQuizRequest(value => value+1); requestAnimationFrame(() => document.getElementById("study-studio")?.scrollIntoView({behavior:"smooth",block:"start"}));}}/>
     </main>
   );
 }

@@ -17,7 +17,7 @@ test('untrusted locale values cannot become catalog paths and RTL uses explicit 
   assert.equal(uiDirection('fr'),'ltr');
 });
 test('rendered labels, placeholders, and status messages are represented in the source catalog',()=>{
-  for(const filename of ['Assistant.tsx','LessonPlayer.tsx','LocalizedFileInput.tsx','I18nProvider.tsx','AccountForm.tsx','AdminPanel.tsx','StudyPanel.tsx','EvidenceSources.tsx','IntelligencePanel.tsx']){
+  for(const filename of ['Assistant.tsx','LessonPlayer.tsx','LocalizedFileInput.tsx','I18nProvider.tsx','AccountForm.tsx','AdminPanel.tsx','StudyPanel.tsx','EvidenceSources.tsx','IntelligencePanel.tsx','LumiCompanion.tsx','ConceptBoard.tsx','CompanionPlayground.tsx']){
     const source=fs.readFileSync(new URL('../components/'+filename,import.meta.url),'utf8');
     const ast=ts.createSourceFile(filename,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
     function visit(node){
