@@ -556,5 +556,6 @@
   "Accuracy": "Tikslumas",
   "Saved notes": "Išsaugoti užrašai",
   "Due for revision": "Laikas pakartoti",
-  "No weak topics recorded in the material available at this video position.": "Šioje vaizdo įrašo vietoje pasiekiamoje medžiagoje silpnų temų neužfiksuota."
+  "No weak topics recorded in the material available at this video position.": "Šioje vaizdo įrašo vietoje pasiekiamoje medžiagoje silpnų temų neužfiksuota.",
+  "Sign-in failed. Check your email address and password.": "Nepavyko prisijungti. Patikrinkite el. pašto adresą ir slaptažodį."
 }

@@ -556,5 +556,6 @@
   "Accuracy": "Nøjagtighed",
   "Saved notes": "Gemte noter",
   "Due for revision": "Forfalden til revision",
-  "No weak topics recorded in the material available at this video position.": "Ingen svage emner registreret i materialet tilgængeligt ved denne videoposition."
+  "No weak topics recorded in the material available at this video position.": "Ingen svage emner registreret i materialet tilgængeligt ved denne videoposition.",
+  "Sign-in failed. Check your email address and password.": "Log ind mislykkedes. Tjek din e-mailadresse og adgangskode."
 }

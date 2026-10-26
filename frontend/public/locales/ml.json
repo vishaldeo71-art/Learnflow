@@ -556,5 +556,6 @@
   "Accuracy": "കൃത്യത",
   "Saved notes": "സൂക്ഷിച്ച കുറിപ്പുകൾ",
   "Due for revision": "പുനരവലോകനം ചെയ്യേണ്ടതുണ്ട്",
-  "No weak topics recorded in the material available at this video position.": "ഈ വീഡിയോ സ്ഥാനത്ത് ലഭ്യമായ മെറ്റീരിയലിൽ ദുർബലമായ വിഷയങ്ങളൊന്നും രേഖപ്പെടുത്തിയിട്ടില്ല."
+  "No weak topics recorded in the material available at this video position.": "ഈ വീഡിയോ സ്ഥാനത്ത് ലഭ്യമായ മെറ്റീരിയലിൽ ദുർബലമായ വിഷയങ്ങളൊന്നും രേഖപ്പെടുത്തിയിട്ടില്ല.",
+  "Sign-in failed. Check your email address and password.": "സൈൻ-ഇൻ പരാജയപ്പെട്ടു. നിങ്ങളുടെ ഇമെയിൽ വിലാസവും പാസ്‌വേഡും പരിശോധിക്കുക."
 }

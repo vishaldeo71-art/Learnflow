@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { authClient, safeNext } from "@/lib/supabase/server";
+import { loginErrorMessage } from "@/lib/auth-errors";
 
 export async function POST(request: NextRequest) {
   if (request.headers.get("origin") !== request.nextUrl.origin)
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
       {
         error:
           body.action === "login"
-            ? "Sign-in failed. Check your email, password, and email confirmation."
+            ? loginErrorMessage(error)
             : "The account request could not be completed. Please retry later.",
       },
       { status: 400 },

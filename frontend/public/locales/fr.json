@@ -556,5 +556,6 @@
   "Accuracy": "Précision",
   "Saved notes": "Notes enregistrées",
   "Due for revision": "À réviser",
-  "No weak topics recorded in the material available at this video position.": "Aucun sujet faible enregistré dans le matériel disponible à cette position de la vidéo."
+  "No weak topics recorded in the material available at this video position.": "Aucun sujet faible enregistré dans le matériel disponible à cette position de la vidéo.",
+  "Sign-in failed. Check your email address and password.": "Échec de la connexion. Vérifiez votre adresse e-mail et votre mot de passe."
 }

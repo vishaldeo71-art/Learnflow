@@ -556,5 +556,6 @@
   "Accuracy": "准确率",
   "Saved notes": "已保存的笔记",
   "Due for revision": "待复习",
-  "No weak topics recorded in the material available at this video position.": "在当前视频位置的可用材料中未记录薄弱知识点。"
+  "No weak topics recorded in the material available at this video position.": "在当前视频位置的可用材料中未记录薄弱知识点。",
+  "Sign-in failed. Check your email address and password.": "登录失败。请检查您的电子邮件地址和密码。"
 }

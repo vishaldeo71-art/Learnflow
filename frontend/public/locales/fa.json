@@ -556,5 +556,6 @@
   "Accuracy": "دقت",
   "Saved notes": "یادداشت‌های ذخیره‌شده",
   "Due for revision": "موعد مرور",
-  "No weak topics recorded in the material available at this video position.": "هیچ موضوع ضعیفی در مطالب موجود در این موقعیت ویدیو ثبت نشده است."
+  "No weak topics recorded in the material available at this video position.": "هیچ موضوع ضعیفی در مطالب موجود در این موقعیت ویدیو ثبت نشده است.",
+  "Sign-in failed. Check your email address and password.": "ورود ناموفق بود. آدرس ایمیل و رمز عبور خود را بررسی کنید."
 }

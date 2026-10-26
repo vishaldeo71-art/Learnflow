@@ -556,5 +556,6 @@
   "Accuracy": "Precisión",
   "Saved notes": "Notas guardadas",
   "Due for revision": "Pendiente de repaso",
-  "No weak topics recorded in the material available at this video position.": "No hay temas débiles registrados en el material disponible en esta posición del vídeo."
+  "No weak topics recorded in the material available at this video position.": "No hay temas débiles registrados en el material disponible en esta posición del vídeo.",
+  "Sign-in failed. Check your email address and password.": "Error de inicio de sesión. Comprueba tu dirección de correo electrónico y tu contraseña."
 }

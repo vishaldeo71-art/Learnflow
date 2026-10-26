@@ -556,5 +556,6 @@
   "Accuracy": "სიზუსტე",
   "Saved notes": "შენახული შენიშვნები",
   "Due for revision": "გასამეორებელი",
-  "No weak topics recorded in the material available at this video position.": "ამ ვიდეოს პოზიციაზე არსებულ მასალაში სუსტი თემები არ არის დაფიქსირებული."
+  "No weak topics recorded in the material available at this video position.": "ამ ვიდეოს პოზიციაზე არსებულ მასალაში სუსტი თემები არ არის დაფიქსირებული.",
+  "Sign-in failed. Check your email address and password.": "შესვლა ვერ მოხერხდა. შეამოწმეთ თქვენი ელფოსტის მისამართი და პაროლი."
 }

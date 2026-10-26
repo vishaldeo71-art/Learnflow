@@ -556,5 +556,6 @@
   "Accuracy": "正答率",
   "Saved notes": "保存したノート",
   "Due for revision": "復習予定",
-  "No weak topics recorded in the material available at this video position.": "この動画の位置で利用可能な教材には、記録された苦手なトピックはありません。"
+  "No weak topics recorded in the material available at this video position.": "この動画の位置で利用可能な教材には、記録された苦手なトピックはありません。",
+  "Sign-in failed. Check your email address and password.": "サインインに失敗しました。メールアドレスとパスワードを確認してください。"
 }

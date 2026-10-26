@@ -556,5 +556,6 @@
   "Accuracy": "Točnost",
   "Saved notes": "Spremljene bilješke",
   "Due for revision": "Za ponavljanje",
-  "No weak topics recorded in the material available at this video position.": "Nema zabilježenih slabih tema u materijalu dostupnom na ovoj poziciji videozapisa."
+  "No weak topics recorded in the material available at this video position.": "Nema zabilježenih slabih tema u materijalu dostupnom na ovoj poziciji videozapisa.",
+  "Sign-in failed. Check your email address and password.": "Prijava nije uspjela. Provjerite svoju adresu e-pošte i lozinku."
 }

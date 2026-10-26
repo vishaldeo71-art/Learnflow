@@ -556,5 +556,6 @@
   "Accuracy": "Нарийвчлал",
   "Saved notes": "Хадгалсан тэмдэглэлүүд",
   "Due for revision": "Давтах шаардлагатай",
-  "No weak topics recorded in the material available at this video position.": "Энэ видеоны байрлалд байгаа материалад ямар нэгэн сул сэдэв бүртгэгдээгүй байна."
+  "No weak topics recorded in the material available at this video position.": "Энэ видеоны байрлалд байгаа материалад ямар нэгэн сул сэдэв бүртгэгдээгүй байна.",
+  "Sign-in failed. Check your email address and password.": "Нэвтэрч чадсангүй. Имэйл хаяг болон нууц үгээ шалгана уу."
 }

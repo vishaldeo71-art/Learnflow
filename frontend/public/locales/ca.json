@@ -556,5 +556,6 @@
   "Accuracy": "Precisió",
   "Saved notes": "Notes desades",
   "Due for revision": "Pendent de revisió",
-  "No weak topics recorded in the material available at this video position.": "No s'ha registrat cap tema feble en el material disponible en aquesta posició del vídeo."
+  "No weak topics recorded in the material available at this video position.": "No s'ha registrat cap tema feble en el material disponible en aquesta posició del vídeo.",
+  "Sign-in failed. Check your email address and password.": "Error d'inici de sessió. Comproveu la vostra adreça de correu electrònic i la contrasenya."
 }

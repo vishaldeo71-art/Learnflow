@@ -556,5 +556,6 @@
   "Accuracy": "Tarkkuus",
   "Saved notes": "Tallennetut muistiinpanot",
   "Due for revision": "Kertauksen tarpeessa",
-  "No weak topics recorded in the material available at this video position.": "Heikkoja aiheita ei ole kirjattu tässä videon kohdassa saatavilla olevaan materiaaliin."
+  "No weak topics recorded in the material available at this video position.": "Heikkoja aiheita ei ole kirjattu tässä videon kohdassa saatavilla olevaan materiaaliin.",
+  "Sign-in failed. Check your email address and password.": "Kirjautuminen epäonnistui. Tarkista sähköpostiosoitteesi ja salasana."
 }

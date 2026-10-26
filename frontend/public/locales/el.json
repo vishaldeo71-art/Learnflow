@@ -556,5 +556,6 @@
   "Accuracy": "Ακρίβεια",
   "Saved notes": "Αποθηκευμένες σημειώσεις",
   "Due for revision": "Λήγει για επανάληψη",
-  "No weak topics recorded in the material available at this video position.": "Δεν καταγράφηκαν αδύνατα θέματα στο υλικό που είναι διαθέσιμο σε αυτή τη θέση βίντεο."
+  "No weak topics recorded in the material available at this video position.": "Δεν καταγράφηκαν αδύνατα θέματα στο υλικό που είναι διαθέσιμο σε αυτή τη θέση βίντεο.",
+  "Sign-in failed. Check your email address and password.": "Η σύνδεση απέτυχε. Ελέγξτε τη διεύθυνση email και τον κωδικό πρόσβασής σας."
 }

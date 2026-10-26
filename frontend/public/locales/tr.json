@@ -556,5 +556,6 @@
   "Accuracy": "Doğruluk",
   "Saved notes": "Kaydedilen notlar",
   "Due for revision": "Tekrar zamanı",
-  "No weak topics recorded in the material available at this video position.": "Bu video konumunda mevcut materyalde kayıtlı zayıf konu yok."
+  "No weak topics recorded in the material available at this video position.": "Bu video konumunda mevcut materyalde kayıtlı zayıf konu yok.",
+  "Sign-in failed. Check your email address and password.": "Oturum açılamadı. E-posta adresinizi ve şifrenizi kontrol edin."
 }

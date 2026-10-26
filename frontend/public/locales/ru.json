@@ -556,5 +556,6 @@
   "Accuracy": "Точность",
   "Saved notes": "Сохраненные заметки",
   "Due for revision": "Требуется повторение",
-  "No weak topics recorded in the material available at this video position.": "В материалах, доступных на этой позиции видео, не записано слабых тем."
+  "No weak topics recorded in the material available at this video position.": "В материалах, доступных на этой позиции видео, не записано слабых тем.",
+  "Sign-in failed. Check your email address and password.": "Не удалось войти. Проверьте адрес электронной почты и пароль."
 }

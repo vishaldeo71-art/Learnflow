@@ -556,5 +556,6 @@
   "Accuracy": "ຄວາມຖືກຕ້ອງ",
   "Saved notes": "ບັນທຶກທີ່ບັນທຶກໄວ້",
   "Due for revision": "ຮອດกำหนดທົບທວນ",
-  "No weak topics recorded in the material available at this video position.": "ບໍ່ມີຫົວຂໍ້ທີ່ອ່ອນແອຖືກບັນທຶກໄວ້ໃນວັດສະດຸທີ່ມີຢູ່ທີ່ຕຳແໜ່ງວິດີໂອນີ້."
+  "No weak topics recorded in the material available at this video position.": "ບໍ່ມີຫົວຂໍ້ທີ່ອ່ອນແອຖືກບັນທຶກໄວ້ໃນວັດສະດຸທີ່ມີຢູ່ທີ່ຕຳແໜ່ງວິດີໂອນີ້.",
+  "Sign-in failed. Check your email address and password.": "ການເຂົ້າສູ່ລະບົບລົ້ມເຫລວ. ກະລຸນາຕรวจສອບທີ່ຢູ່ອີເມວ ແລະ ລະຫັດຜ່ານຂອງທ່ານ."
 }

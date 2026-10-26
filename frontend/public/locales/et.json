@@ -556,5 +556,6 @@
   "Accuracy": "Täpsus",
   "Saved notes": "Salvestatud märkmed",
   "Due for revision": "Kordamisele kuuluvad",
-  "No weak topics recorded in the material available at this video position.": "Selle videoasendi jaoks saadaolevas materjalis pole nõrku teemasid registreeritud."
+  "No weak topics recorded in the material available at this video position.": "Selle videoasendi jaoks saadaolevas materjalis pole nõrku teemasid registreeritud.",
+  "Sign-in failed. Check your email address and password.": "Sisselogimine ebaõnnestus. Kontrollige oma e-posti aadressi ja parooli."
 }

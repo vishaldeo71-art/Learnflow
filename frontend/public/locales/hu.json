@@ -556,5 +556,6 @@
   "Accuracy": "Pontosság",
   "Saved notes": "Mentett jegyzetek",
   "Due for revision": "Ismétlésre vár",
-  "No weak topics recorded in the material available at this video position.": "Nem rögzítettek gyenge témákat a videó pozíciójában elérhető anyagban."
+  "No weak topics recorded in the material available at this video position.": "Nem rögzítettek gyenge témákat a videó pozíciójában elérhető anyagban.",
+  "Sign-in failed. Check your email address and password.": "A bejelentkezés sikertelen. Ellenőrizze az e-mail címét és a jelszavát."
 }

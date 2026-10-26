@@ -556,5 +556,6 @@
   "Accuracy": "Träffsäkerhet",
   "Saved notes": "Sparade anteckningar",
   "Due for revision": "Dags för repetition",
-  "No weak topics recorded in the material available at this video position.": "Inga svaga ämnen registrerade i materialet som är tillgängligt vid denna videoposition."
+  "No weak topics recorded in the material available at this video position.": "Inga svaga ämnen registrerade i materialet som är tillgängligt vid denna videoposition.",
+  "Sign-in failed. Check your email address and password.": "Inloggningen misslyckades. Kontrollera din e-postadress och ditt lösenord."
 }

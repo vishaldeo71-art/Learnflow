@@ -556,5 +556,6 @@
   "Accuracy": "ትክክለኛነት",
   "Saved notes": "የተቀመጡ ማስታወሻዎች",
   "Due for revision": "ለግምገማ የሚገባ",
-  "No weak topics recorded in the material available at this video position.": "በዚህ የቪዲዮ ቦታ ላይ ባለው ቁሳቁስ ውስጥ ምንም ድክመት ያላቸው ርዕሶች አልተመዘገቡም።"
+  "No weak topics recorded in the material available at this video position.": "በዚህ የቪዲዮ ቦታ ላይ ባለው ቁሳቁስ ውስጥ ምንም ድክመት ያላቸው ርዕሶች አልተመዘገቡም።",
+  "Sign-in failed. Check your email address and password.": "ይግቡ አልተሳካም። የኢሜይል አድራሻዎን እና የይለፍ ቃልዎን ይፈትሹ።"
 }
