@@ -13,7 +13,7 @@ export default function ConceptBoard({visual}: {visual: Visual}) {
   return <section className="lumi-board" aria-label={t("Interactive concept board")}>
     <div className="lumi-board-heading"><strong>{visual.title}</strong><button type="button" className="lumi-text-button" aria-pressed={flat} onClick={() => setFlat(!flat)}>{t(flat ? "3D view" : "Flat view")}</button></div>
     <div className={`lumi-board-viewport ${flat ? "lumi-board-flat" : ""}`} onPointerDown={event => {
-      if (flat || event.target instanceof HTMLButtonElement) return;
+      if (flat || (event.target instanceof Element && event.target.closest("button"))) return;
       drag.current = {x: event.clientX, y: event.clientY, rx: rotation.x, ry: rotation.y};
       event.currentTarget.setPointerCapture(event.pointerId);
     }} onPointerMove={event => {
