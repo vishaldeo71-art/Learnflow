@@ -557,5 +557,6 @@
   "Saved notes": "הערות שמורות",
   "Due for revision": "מיועד לחזרה",
   "No weak topics recorded in the material available at this video position.": "אין נושאים חלשים רשומים בחומר הזמין במיקום וידאו זה.",
-  "Sign-in failed. Check your email address and password.": "הכניסה נכשלה. בדוק את כתובת האימייל והסיסמה שלך."
+  "Sign-in failed. Check your email address and password.": "הכניסה נכשלה. בדוק את כתובת האימייל והסיסמה שלך.",
+  "An account with this email already exists. Sign in or use Forgot password.": "כבר קיים חשבון עם כתובת האימייל הזו. יש להתחבר או לבחור ב״שכחת סיסמה?״."
 }

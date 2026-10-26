@@ -557,5 +557,6 @@
   "Saved notes": "Note salvate",
   "Due for revision": "De revizuit",
   "No weak topics recorded in the material available at this video position.": "Niciun subiect slab înregistrat în materialul disponibil la această poziție video.",
-  "Sign-in failed. Check your email address and password.": "Autentificarea eșuată. Verificați adresa de e-mail și parola."
+  "Sign-in failed. Check your email address and password.": "Autentificarea eșuată. Verificați adresa de e-mail și parola.",
+  "An account with this email already exists. Sign in or use Forgot password.": "Există deja un cont cu acest e-mail. Autentifică-te sau folosește „Ai uitat parola?”."
 }

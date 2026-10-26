@@ -557,5 +557,6 @@
   "Saved notes": "Запазени бележки",
   "Due for revision": "Предвидени за преговор",
   "No weak topics recorded in the material available at this video position.": "Няма записани слаби теми в материала, наличен в тази позиция на видеото.",
-  "Sign-in failed. Check your email address and password.": "Неуспешно влизане. Проверете имейл адреса и паролата си."
+  "Sign-in failed. Check your email address and password.": "Неуспешно влизане. Проверете имейл адреса и паролата си.",
+  "An account with this email already exists. Sign in or use Forgot password.": "Вече съществува акаунт с този имейл. Влезте или изберете „Забравена парола?“."
 }

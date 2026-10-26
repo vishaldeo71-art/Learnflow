@@ -557,5 +557,6 @@
   "Saved notes": "Mga na-save na tala",
   "Due for revision": "Kailangan para sa rebisyon",
   "No weak topics recorded in the material available at this video position.": "Walang naitalang mahihinang paksa sa materyal na available sa posisyong ito ng video.",
-  "Sign-in failed. Check your email address and password.": "Nabigo ang pag-sign in. Suriin ang iyong email address at password."
+  "Sign-in failed. Check your email address and password.": "Nabigo ang pag-sign in. Suriin ang iyong email address at password.",
+  "An account with this email already exists. Sign in or use Forgot password.": "May account na gamit ang email na ito. Mag-sign in o piliin ang «Nakalimutan ang password?»."
 }

@@ -557,5 +557,6 @@
   "Saved notes": "یادداشت‌های ذخیره‌شده",
   "Due for revision": "موعد مرور",
   "No weak topics recorded in the material available at this video position.": "هیچ موضوع ضعیفی در مطالب موجود در این موقعیت ویدیو ثبت نشده است.",
-  "Sign-in failed. Check your email address and password.": "ورود ناموفق بود. آدرس ایمیل و رمز عبور خود را بررسی کنید."
+  "Sign-in failed. Check your email address and password.": "ورود ناموفق بود. آدرس ایمیل و رمز عبور خود را بررسی کنید.",
+  "An account with this email already exists. Sign in or use Forgot password.": "حسابی با این ایمیل از قبل وجود دارد. وارد شوید یا از «رمز عبور را فراموش کرده‌اید؟» استفاده کنید."
 }

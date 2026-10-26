@@ -557,5 +557,6 @@
   "Saved notes": "Catatan tersimpan",
   "Due for revision": "Jadwal ulasan",
   "No weak topics recorded in the material available at this video position.": "Tidak ada topik lemah yang tercatat dalam materi yang tersedia di posisi video ini.",
-  "Sign-in failed. Check your email address and password.": "Gagal masuk. Periksa alamat email dan kata sandi Anda."
+  "Sign-in failed. Check your email address and password.": "Gagal masuk. Periksa alamat email dan kata sandi Anda.",
+  "An account with this email already exists. Sign in or use Forgot password.": "Akun dengan email ini sudah ada. Masuk atau gunakan «Lupa kata sandi?»."
 }

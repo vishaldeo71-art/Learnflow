@@ -557,5 +557,6 @@
   "Saved notes": "Сохраненные заметки",
   "Due for revision": "Требуется повторение",
   "No weak topics recorded in the material available at this video position.": "В материалах, доступных на этой позиции видео, не записано слабых тем.",
-  "Sign-in failed. Check your email address and password.": "Не удалось войти. Проверьте адрес электронной почты и пароль."
+  "Sign-in failed. Check your email address and password.": "Не удалось войти. Проверьте адрес электронной почты и пароль.",
+  "An account with this email already exists. Sign in or use Forgot password.": "Аккаунт с этой почтой уже существует. Войдите или нажмите «Забыли пароль?»."
 }

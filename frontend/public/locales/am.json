@@ -557,5 +557,6 @@
   "Saved notes": "የተቀመጡ ማስታወሻዎች",
   "Due for revision": "ለግምገማ የሚገባ",
   "No weak topics recorded in the material available at this video position.": "በዚህ የቪዲዮ ቦታ ላይ ባለው ቁሳቁስ ውስጥ ምንም ድክመት ያላቸው ርዕሶች አልተመዘገቡም።",
-  "Sign-in failed. Check your email address and password.": "ይግቡ አልተሳካም። የኢሜይል አድራሻዎን እና የይለፍ ቃልዎን ይፈትሹ።"
+  "Sign-in failed. Check your email address and password.": "ይግቡ አልተሳካም። የኢሜይል አድራሻዎን እና የይለፍ ቃልዎን ይፈትሹ።",
+  "An account with this email already exists. Sign in or use Forgot password.": "በዚህ ኢሜይል መለያ አስቀድሞ አለ። ይግቡ ወይም «የይለፍ ቃል ረሱ?» የሚለውን ይጠቀሙ።"
 }

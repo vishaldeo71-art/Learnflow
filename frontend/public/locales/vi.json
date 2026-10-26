@@ -557,5 +557,6 @@
   "Saved notes": "Ghi chú đã lưu",
   "Due for revision": "Đến hạn ôn tập",
   "No weak topics recorded in the material available at this video position.": "Không có chủ đề yếu nào được ghi lại trong tài liệu có sẵn tại vị trí video này.",
-  "Sign-in failed. Check your email address and password.": "Đăng nhập thất bại. Kiểm tra địa chỉ email và mật khẩu của bạn."
+  "Sign-in failed. Check your email address and password.": "Đăng nhập thất bại. Kiểm tra địa chỉ email và mật khẩu của bạn.",
+  "An account with this email already exists. Sign in or use Forgot password.": "Đã có tài khoản với email này. Hãy đăng nhập hoặc chọn «Quên mật khẩu?»."
 }

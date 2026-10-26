@@ -557,5 +557,6 @@
   "Saved notes": "Spremljene bilješke",
   "Due for revision": "Za ponavljanje",
   "No weak topics recorded in the material available at this video position.": "Nema zabilježenih slabih tema u materijalu dostupnom na ovoj poziciji videozapisa.",
-  "Sign-in failed. Check your email address and password.": "Prijava nije uspjela. Provjerite svoju adresu e-pošte i lozinku."
+  "Sign-in failed. Check your email address and password.": "Prijava nije uspjela. Provjerite svoju adresu e-pošte i lozinku.",
+  "An account with this email already exists. Sign in or use Forgot password.": "Račun s ovom e-adresom već postoji. Prijavite se ili odaberite „Zaboravljena lozinka?”."
 }

@@ -557,5 +557,6 @@
   "Saved notes": "ಉಳಿಸಿದ ಟಿಪ್ಪಣಿಗಳು",
   "Due for revision": "ಪರಿಷ್ಕರಣೆಗೆ ಬಾಕಿ ಇದೆ",
   "No weak topics recorded in the material available at this video position.": "ಈ ವೀಡಿಯೊ ಸ್ಥಾನದಲ್ಲಿ ಲಭ್ಯವಿರುವ ವಸ್ತುವಿನಲ್ಲಿ ಯಾವುದೇ ದುರ್ಬಲ ವಿಷಯಗಳನ್ನು ದಾಖಲಿಸಲಾಗಿಲ್ಲ.",
-  "Sign-in failed. Check your email address and password.": "ಸೈನ್-ಇನ್ ವಿಫಲವಾಗಿದೆ. ನಿಮ್ಮ ಇಮೇಲ್ ವಿಳಾಸ ಮತ್ತು ಪಾಸ್‌ವರ್ಡ್ ಅನ್ನು ಪರಿಶೀಲಿಸಿ."
+  "Sign-in failed. Check your email address and password.": "ಸೈನ್-ಇನ್ ವಿಫಲವಾಗಿದೆ. ನಿಮ್ಮ ಇಮೇಲ್ ವಿಳಾಸ ಮತ್ತು ಪಾಸ್‌ವರ್ಡ್ ಅನ್ನು ಪರಿಶೀಲಿಸಿ.",
+  "An account with this email already exists. Sign in or use Forgot password.": "ಈ ಇಮೇಲ್‌ನೊಂದಿಗೆ ಖಾತೆ ಈಗಾಗಲೇ ಇದೆ. ಸೈನ್ ಇನ್ ಮಾಡಿ ಅಥವಾ «ಪಾಸ್‌ವರ್ಡ್ ಮರೆತಿರಾ?» ಆಯ್ಕೆಮಾಡಿ."
 }

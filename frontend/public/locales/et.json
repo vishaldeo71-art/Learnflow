@@ -557,5 +557,6 @@
   "Saved notes": "Salvestatud märkmed",
   "Due for revision": "Kordamisele kuuluvad",
   "No weak topics recorded in the material available at this video position.": "Selle videoasendi jaoks saadaolevas materjalis pole nõrku teemasid registreeritud.",
-  "Sign-in failed. Check your email address and password.": "Sisselogimine ebaõnnestus. Kontrollige oma e-posti aadressi ja parooli."
+  "Sign-in failed. Check your email address and password.": "Sisselogimine ebaõnnestus. Kontrollige oma e-posti aadressi ja parooli.",
+  "An account with this email already exists. Sign in or use Forgot password.": "Selle e-postiga konto on juba olemas. Logi sisse või vali „Unustasid parooli?”."
 }

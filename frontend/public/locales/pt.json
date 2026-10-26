@@ -557,5 +557,6 @@
   "Saved notes": "Notas guardadas",
   "Due for revision": "Em falta para revisão",
   "No weak topics recorded in the material available at this video position.": "Nenhum tópico fraco registado no material disponível nesta posição do vídeo.",
-  "Sign-in failed. Check your email address and password.": "Falha no início de sessão. Verifique o seu endereço de e-mail e palavra-passe."
+  "Sign-in failed. Check your email address and password.": "Falha no início de sessão. Verifique o seu endereço de e-mail e palavra-passe.",
+  "An account with this email already exists. Sign in or use Forgot password.": "Já existe uma conta com este email. Entre ou use «Esqueceu a senha?»."
 }

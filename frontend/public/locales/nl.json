@@ -557,5 +557,6 @@
   "Saved notes": "Opgeslagen notities",
   "Due for revision": "Klaar voor herhaling",
   "No weak topics recorded in the material available at this video position.": "Geen zwakke onderwerpen geregistreerd in het materiaal dat beschikbaar is op deze videopositie.",
-  "Sign-in failed. Check your email address and password.": "Inloggen mislukt. Controleer je e-mailadres en wachtwoord."
+  "Sign-in failed. Check your email address and password.": "Inloggen mislukt. Controleer je e-mailadres en wachtwoord.",
+  "An account with this email already exists. Sign in or use Forgot password.": "Er bestaat al een account met dit e-mailadres. Log in of kies ‘Wachtwoord vergeten?’."
 }

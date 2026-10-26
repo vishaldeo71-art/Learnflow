@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { authClient, safeNext } from "@/lib/supabase/server";
 import { loginErrorMessage } from "@/lib/auth-errors";
-import { accountMode, accountNotice, loginNotice } from "@/lib/auth-notices";
+import { accountMode, accountNotice, loginNotice, signupNotice } from "@/lib/auth-notices";
 
 export async function POST(request: NextRequest) {
   if (request.headers.get("origin") !== request.nextUrl.origin)
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       return Response.redirect(new URL(body.action === "logout" ? "/login" : body.action === "password" ? "/" : next,request.nextUrl.origin),303);
     const location = new URL("/login",request.nextUrl.origin);
     location.searchParams.set("next",next);
-    location.searchParams.set("mode",accountMode(body.action));
+    location.searchParams.set("mode",notice === "account_exists" ? "login" : accountMode(body.action));
     location.searchParams.set("notice",data.confirmation ? "confirmation" : data.sent ? "reset_sent" : notice);
     if (body.action === "password") location.searchParams.set("recovery","1");
     return Response.redirect(location,303);
@@ -53,7 +53,10 @@ export async function POST(request: NextRequest) {
     } else if (body.action === "login") {
       ({error} = await client.auth.signInWithPassword({email,password}));
     } else return reply({error:accountNotice("failed")},400);
-    if (error) return reply({error:body.action === "login" ? loginErrorMessage(error) : accountNotice("failed")},400,body.action === "login" ? loginNotice(error.code) : "failed");
+    if (error) {
+      const notice = body.action === "login" ? loginNotice(error.code) : body.action === "signup" ? signupNotice(error.code) : "failed";
+      return reply({error:body.action === "login" ? loginErrorMessage(error) : accountNotice(notice)},400,notice);
+    }
     return reply({next,sent:body.action === "reset"});
   } catch {
     return reply({error:accountNotice("unavailable")},503,"unavailable");

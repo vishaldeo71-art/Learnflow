@@ -557,5 +557,6 @@
   "Saved notes": "บันทึกที่บันทึกไว้",
   "Due for revision": "ถึงกำหนดทบทวน",
   "No weak topics recorded in the material available at this video position.": "ไม่มีการบันทึกหัวข้อที่อ่อนในเนื้อหาที่มีอยู่ที่ตำแหน่งวิดีโอนี้",
-  "Sign-in failed. Check your email address and password.": "การลงชื่อเข้าใช้ล้มเหลว โปรดตรวจสอบที่อยู่อีเมลและรหัสผ่านของคุณ"
+  "Sign-in failed. Check your email address and password.": "การลงชื่อเข้าใช้ล้มเหลว โปรดตรวจสอบที่อยู่อีเมลและรหัสผ่านของคุณ",
+  "An account with this email already exists. Sign in or use Forgot password.": "มีบัญชีที่ใช้อีเมลนี้อยู่แล้ว กรุณาเข้าสู่ระบบหรือเลือก «ลืมรหัสผ่าน?»"
 }

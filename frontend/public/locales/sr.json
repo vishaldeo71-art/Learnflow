@@ -557,5 +557,6 @@
   "Saved notes": "Сачуване белешке",
   "Due for revision": "За обнављање",
   "No weak topics recorded in the material available at this video position.": "Нема забележених слабих тема у материјалу доступном на овој позицији видео снимка.",
-  "Sign-in failed. Check your email address and password.": "Пријављивање није успело. Проверите адресу е-поште и лозинку."
+  "Sign-in failed. Check your email address and password.": "Пријављивање није успело. Проверите адресу е-поште и лозинку.",
+  "An account with this email already exists. Sign in or use Forgot password.": "Налог са овом имејл адресом већ постоји. Пријавите се или изаберите „Заборављена лозинка?”."
 }

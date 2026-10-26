@@ -557,5 +557,6 @@
   "Saved notes": "Gespeicherte Notizen",
   "Due for revision": "Fällig zur Wiederholung",
   "No weak topics recorded in the material available at this video position.": "Keine schwachen Themen im verfügbaren Material an dieser Videoposition aufgezeichnet.",
-  "Sign-in failed. Check your email address and password.": "Anmeldung fehlgeschlagen. Überprüfen Sie Ihre E-Mail-Adresse und Ihr Passwort."
+  "Sign-in failed. Check your email address and password.": "Anmeldung fehlgeschlagen. Überprüfen Sie Ihre E-Mail-Adresse und Ihr Passwort.",
+  "An account with this email already exists. Sign in or use Forgot password.": "Ein Konto mit dieser E-Mail-Adresse existiert bereits. Melde dich an oder nutze „Passwort vergessen?“."
 }

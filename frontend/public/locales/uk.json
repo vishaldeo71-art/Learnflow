@@ -557,5 +557,6 @@
   "Saved notes": "Збережені нотатки",
   "Due for revision": "Потребує повторення",
   "No weak topics recorded in the material available at this video position.": "У матеріалах, доступних на цій позиції відео, немає записів про слабкі теми.",
-  "Sign-in failed. Check your email address and password.": "Не вдалося увійти. Перевірте адресу електронної пошти та пароль."
+  "Sign-in failed. Check your email address and password.": "Не вдалося увійти. Перевірте адресу електронної пошти та пароль.",
+  "An account with this email already exists. Sign in or use Forgot password.": "Обліковий запис із цією поштою вже існує. Увійдіть або натисніть «Забули пароль?»."
 }

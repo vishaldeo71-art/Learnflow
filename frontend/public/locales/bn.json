@@ -557,5 +557,6 @@
   "Saved notes": "সংরক্ষিত নোট",
   "Due for revision": "রিভিশনের সময় হয়েছে",
   "No weak topics recorded in the material available at this video position.": "এই ভিডিও অবস্থানে উপলব্ধ উপাদানে কোনো দুর্বল বিষয় রেকর্ড করা হয়নি।",
-  "Sign-in failed. Check your email address and password.": "সাইন-ইন ব্যর্থ হয়েছে। আপনার ইমেল ঠিকানা এবং পাসওয়ার্ড পরীক্ষা করুন।"
+  "Sign-in failed. Check your email address and password.": "সাইন-ইন ব্যর্থ হয়েছে। আপনার ইমেল ঠিকানা এবং পাসওয়ার্ড পরীক্ষা করুন।",
+  "An account with this email already exists. Sign in or use Forgot password.": "এই ইমেইলে ইতিমধ্যে একটি অ্যাকাউন্ট আছে। সাইন ইন করুন অথবা «পাসওয়ার্ড ভুলে গেছেন?» ব্যবহার করুন।"
 }

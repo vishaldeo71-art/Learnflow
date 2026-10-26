@@ -557,5 +557,6 @@
   "Saved notes": "සුරකින ලද සටහන්",
   "Due for revision": "පුනරීක්ෂණය කිරීමට නියමිත",
   "No weak topics recorded in the material available at this video position.": "මෙම වීඩියෝ පිහිටීමෙහි ඇති ද්‍රව්‍යවල දුර්වල මාතෘකා කිසිවක් සටහන් කර නොමැත.",
-  "Sign-in failed. Check your email address and password.": "පුරනය වීම අසාර්ථකයි. ඔබගේ විද්‍යුත් තැපැල් ලිපිනය සහ මුරපදය පරීක්ෂා කරන්න."
+  "Sign-in failed. Check your email address and password.": "පුරනය වීම අසාර්ථකයි. ඔබගේ විද්‍යුත් තැපැල් ලිපිනය සහ මුරපදය පරීක්ෂා කරන්න.",
+  "An account with this email already exists. Sign in or use Forgot password.": "මෙම ඊමේල් ලිපිනයට ගිණුමක් දැනටමත් ඇත. පිවිසෙන්න හෝ «මුරපදය අමතකද?» තෝරන්න."
 }

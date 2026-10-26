@@ -557,5 +557,6 @@
   "Saved notes": "Сақталған жазбалар",
   "Due for revision": "Қайталауға тиіс",
   "No weak topics recorded in the material available at this video position.": "Бұл видео орнындағы қолжетімді материалда ешқандай әлсіз тақырыптар тіркелмеген.",
-  "Sign-in failed. Check your email address and password.": "Кіру сәтсіз аяқталды. Электрондық пошта мекенжайы мен құпия сөзді тексеріңіз."
+  "Sign-in failed. Check your email address and password.": "Кіру сәтсіз аяқталды. Электрондық пошта мекенжайы мен құпия сөзді тексеріңіз.",
+  "An account with this email already exists. Sign in or use Forgot password.": "Бұл электрондық поштамен тіркелгі бар. Кіріңіз немесе «Құпиясөзді ұмыттыңыз ба?» таңдаңыз."
 }

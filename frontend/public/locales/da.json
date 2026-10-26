@@ -557,5 +557,6 @@
   "Saved notes": "Gemte noter",
   "Due for revision": "Forfalden til revision",
   "No weak topics recorded in the material available at this video position.": "Ingen svage emner registreret i materialet tilgængeligt ved denne videoposition.",
-  "Sign-in failed. Check your email address and password.": "Log ind mislykkedes. Tjek din e-mailadresse og adgangskode."
+  "Sign-in failed. Check your email address and password.": "Log ind mislykkedes. Tjek din e-mailadresse og adgangskode.",
+  "An account with this email already exists. Sign in or use Forgot password.": "Der findes allerede en konto med denne e-mail. Log ind, eller vælg „Glemt adgangskode?”."
 }

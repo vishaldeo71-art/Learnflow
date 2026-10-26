@@ -557,5 +557,6 @@
   "Saved notes": "Shënime të ruajtura",
   "Due for revision": "Për t'u rishikuar",
   "No weak topics recorded in the material available at this video position.": "Nuk ka tema të dobëta të regjistruara në materialin e disponueshëm në këtë pozicion videoje.",
-  "Sign-in failed. Check your email address and password.": "Hyrja dështoi. Kontrolloni adresën tuaj e-mail dhe fjalëkalimin."
+  "Sign-in failed. Check your email address and password.": "Hyrja dështoi. Kontrolloni adresën tuaj e-mail dhe fjalëkalimin.",
+  "An account with this email already exists. Sign in or use Forgot password.": "Një llogari me këtë email ekziston tashmë. Hyni ose zgjidhni «Keni harruar fjalëkalimin?»."
 }

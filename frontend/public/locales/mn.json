@@ -557,5 +557,6 @@
   "Saved notes": "Хадгалсан тэмдэглэлүүд",
   "Due for revision": "Давтах шаардлагатай",
   "No weak topics recorded in the material available at this video position.": "Энэ видеоны байрлалд байгаа материалад ямар нэгэн сул сэдэв бүртгэгдээгүй байна.",
-  "Sign-in failed. Check your email address and password.": "Нэвтэрч чадсангүй. Имэйл хаяг болон нууц үгээ шалгана уу."
+  "Sign-in failed. Check your email address and password.": "Нэвтэрч чадсангүй. Имэйл хаяг болон нууц үгээ шалгана уу.",
+  "An account with this email already exists. Sign in or use Forgot password.": "Энэ имэйлээр бүртгэл аль хэдийн байна. Нэвтрэх эсвэл «Нууц үгээ мартсан уу?» гэдгийг сонгоно уу."
 }

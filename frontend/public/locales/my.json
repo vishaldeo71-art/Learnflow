@@ -557,5 +557,6 @@
   "Saved notes": "သိမ်းဆည်းထားသော မှတ်စုများ",
   "Due for revision": "ပြန်လည်လေ့လာရန် အချိန်ကျရောက်ပြီ",
   "No weak topics recorded in the material available at this video position.": "ဤ ဗီဒီယို တည်နေရာတွင် ရရှိနိုင်သော ပစ္စည်းများ၌ မှတ်တမ်းတင်ထားသော အားနည်းချက်ရှိသော အကြောင်းအရာများ မရှိပါ။",
-  "Sign-in failed. Check your email address and password.": "ဝင်ရောက်မှု မအောင်မြင်ပါ။ သင့်အီးမေးလ်လိပ်စာနှင့် စကားဝှက်ကို စစ်ဆေးပါ။"
+  "Sign-in failed. Check your email address and password.": "ဝင်ရောက်မှု မအောင်မြင်ပါ။ သင့်အီးမေးလ်လိပ်စာနှင့် စကားဝှက်ကို စစ်ဆေးပါ။",
+  "An account with this email already exists. Sign in or use Forgot password.": "ဤအီးမေးလ်ဖြင့် အကောင့်ရှိပြီးဖြစ်သည်။ ဝင်ရောက်ပါ သို့မဟုတ် «စကားဝှက်မေ့နေပါသလား?» ကိုရွေးပါ။"
 }

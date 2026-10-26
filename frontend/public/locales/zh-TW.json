@@ -557,5 +557,6 @@
   "Saved notes": "已儲存的筆記",
   "Due for revision": "待複習",
   "No weak topics recorded in the material available at this video position.": "在此影片位置可用的教材中未記錄薄弱主題。",
-  "Sign-in failed. Check your email address and password.": "登入失敗。請檢查您的電子郵件地址和密碼。"
+  "Sign-in failed. Check your email address and password.": "登入失敗。請檢查您的電子郵件地址和密碼。",
+  "An account with this email already exists. Sign in or use Forgot password.": "此電子郵件已有帳戶。請登入或選擇「忘記密碼？」。"
 }

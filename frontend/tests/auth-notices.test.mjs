@@ -1,6 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {accountNotice, accountMode, loginNotice} from '../lib/auth-notices.ts';
+import {accountNotice, accountMode, loginNotice, signupNotice} from '../lib/auth-notices.ts';
+
+test('duplicate signup directs learners to sign in without masking the cause', () => {
+  for (const code of ['user_already_exists', 'email_exists']) {
+    assert.equal(signupNotice(code), 'account_exists');
+    assert.match(accountNotice(signupNotice(code)), /already exists.*Sign in.*Forgot password/);
+  }
+  for (const code of ['database_error', 'weak_password', undefined]) {
+    assert.equal(signupNotice(code), 'failed');
+  }
+});
 
 test('redirect notices accept only known codes and never reflect arbitrary URL text', () => {
   for (const value of ['<script>alert(1)</script>', '__proto__', 'toString', ['confirmation'], undefined]) {

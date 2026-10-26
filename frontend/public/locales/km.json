@@ -557,5 +557,6 @@
   "Saved notes": "កំណត់ចំណាំដែលបានរក្សាទុក",
   "Due for revision": "ដល់ពេលត្រូវពិនិត្យឡើងវិញ",
   "No weak topics recorded in the material available at this video position.": "គ្មានប្រធានបទខ្សោយត្រូវបានកត់ត្រាក្នុងសម្ភារៈដែលមាននៅទីតាំងវីដេអូនេះទេ។",
-  "Sign-in failed. Check your email address and password.": "ការចូលបានបរាជ័យ។ សូមពិនិត្យមើលអាសយដ្ឋានអ៊ីមែល និងពាក្យសម្ងាត់របស់អ្នក។"
+  "Sign-in failed. Check your email address and password.": "ការចូលបានបរាជ័យ។ សូមពិនិត្យមើលអាសយដ្ឋានអ៊ីមែល និងពាក្យសម្ងាត់របស់អ្នក។",
+  "An account with this email already exists. Sign in or use Forgot password.": "មានគណនីជាមួយអ៊ីមែលនេះរួចហើយ។ សូមចូល ឬប្រើ «ភ្លេចពាក្យសម្ងាត់?»។"
 }

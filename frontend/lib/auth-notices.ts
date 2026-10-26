@@ -6,12 +6,16 @@ export const AUTH_NOTICES: Record<string,string> = {
   unavailable: "The sign-in service is temporarily unavailable. Please retry.",
   invalid_password: "Use a password with 10 to 128 characters.",
   failed: "The account request could not be completed. Please retry later.",
+  account_exists: "An account with this email already exists. Sign in or use Forgot password.",
 };
 export function accountNotice(value: unknown) {
   return typeof value === "string" && Object.hasOwn(AUTH_NOTICES,value) ? AUTH_NOTICES[value] : "";
 }
 export function loginNotice(code?: string) {
   return code === "invalid_credentials" || code === "email_not_confirmed" ? code : "unavailable";
+}
+export function signupNotice(code?: string) {
+  return code === "user_already_exists" || code === "email_exists" ? "account_exists" : "failed";
 }
 export function accountMode(value: unknown) {
   return value === "signup" || value === "reset" ? value : "login";

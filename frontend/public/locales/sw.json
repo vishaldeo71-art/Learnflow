@@ -557,5 +557,6 @@
   "Saved notes": "Vidokezo vilivyohifadhiwa",
   "Due for revision": "Inastahili marekebisho",
   "No weak topics recorded in the material available at this video position.": "Hakuna mada dhaifu zilizorekodiwa katika nyenzo zinazopatikana katika eneo hili la video.",
-  "Sign-in failed. Check your email address and password.": "Imeshindikana kuingia. Angalia anwani yako ya barua pepe na nenosiri."
+  "Sign-in failed. Check your email address and password.": "Imeshindikana kuingia. Angalia anwani yako ya barua pepe na nenosiri.",
+  "An account with this email already exists. Sign in or use Forgot password.": "Akaunti yenye barua pepe hii tayari ipo. Ingia au tumia «Umesahau nenosiri?»."
 }

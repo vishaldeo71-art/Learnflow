@@ -557,5 +557,6 @@
   "Saved notes": "Lagrede notater",
   "Due for revision": "Moden for repetisjon",
   "No weak topics recorded in the material available at this video position.": "Ingen svake emner registrert i materialet som er tilgjengelig på denne videoposisjonen.",
-  "Sign-in failed. Check your email address and password.": "Pålogging mislykkedes. Sjekk e-postadressen og passordet ditt."
+  "Sign-in failed. Check your email address and password.": "Pålogging mislykkedes. Sjekk e-postadressen og passordet ditt.",
+  "An account with this email already exists. Sign in or use Forgot password.": "Det finnes allerede en konto med denne e-postadressen. Logg inn eller velg «Glemt passord?»."
 }

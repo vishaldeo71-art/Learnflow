@@ -557,5 +557,6 @@
   "Saved notes": "Amanothi agciniwe",
   "Due for revision": "Okwezincomo zokubuyekeza",
   "No weak topics recorded in the material available at this video position.": "Azikho izihloko ezibuthakathaka ezirekhodiwe ezintweni ezitholakalayo kulesi sikhundla sevidiyo.",
-  "Sign-in failed. Check your email address and password.": "Ukungena ngemvume kuhlulekile. Hlola ikheli lakho le-imeyili nephasiwedi."
+  "Sign-in failed. Check your email address and password.": "Ukungena ngemvume kuhlulekile. Hlola ikheli lakho le-imeyili nephasiwedi.",
+  "An account with this email already exists. Sign in or use Forgot password.": "I-akhawunti enale imeyili isivele ikhona. Ngena noma usebenzise «Ukhohlwe iphasiwedi?»."
 }

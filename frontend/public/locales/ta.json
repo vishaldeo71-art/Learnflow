@@ -557,5 +557,6 @@
   "Saved notes": "சேமிக்கப்பட்ட குறிப்புகள்",
   "Due for revision": "மறுபரிசீலனை செய்ய வேண்டியவை",
   "No weak topics recorded in the material available at this video position.": "இந்த வீடியோ நிலையில் உள்ள பொருளில் பலவீனமான தலைப்புகள் எதுவும் பதிவு செய்யப்படவில்லை.",
-  "Sign-in failed. Check your email address and password.": "உள்நுழைவு தோல்வியுற்றது. உங்கள் மின்னஞ்சல் முகவரி மற்றும் கடவுச்சொல்லைச் சரிபார்க்கவும்."
+  "Sign-in failed. Check your email address and password.": "உள்நுழைவு தோல்வியுற்றது. உங்கள் மின்னஞ்சல் முகவரி மற்றும் கடவுச்சொல்லைச் சரிபார்க்கவும்.",
+  "An account with this email already exists. Sign in or use Forgot password.": "இந்த மின்னஞ்சலில் ஏற்கனவே கணக்கு உள்ளது. உள்நுழையவும் அல்லது «கடவுச்சொல் மறந்துவிட்டதா?» என்பதைப் பயன்படுத்தவும்."
 }

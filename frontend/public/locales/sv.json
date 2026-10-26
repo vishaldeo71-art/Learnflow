@@ -557,5 +557,6 @@
   "Saved notes": "Sparade anteckningar",
   "Due for revision": "Dags för repetition",
   "No weak topics recorded in the material available at this video position.": "Inga svaga ämnen registrerade i materialet som är tillgängligt vid denna videoposition.",
-  "Sign-in failed. Check your email address and password.": "Inloggningen misslyckades. Kontrollera din e-postadress och ditt lösenord."
+  "Sign-in failed. Check your email address and password.": "Inloggningen misslyckades. Kontrollera din e-postadress och ditt lösenord.",
+  "An account with this email already exists. Sign in or use Forgot password.": "Det finns redan ett konto med denna e-postadress. Logga in eller välj ”Glömt lösenord?”."
 }
