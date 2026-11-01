@@ -60,6 +60,38 @@ class CompanionTests(unittest.IsolatedAsyncioTestCase):
         self.raw['kind'] = '<script>alert(1)</script>'
         with self.assertRaises(ValueError): validate_presentation(self.raw,[self.citation])
 
+    async def test_rich_connections_require_the_same_allowed_evidence(self):
+        self.raw.update(kind='flowchart', summary='Two connected ideas', edges=[{
+            'source':'n1','target':'n2','label':'Related by definition',
+            'source_id':'s1','quote':self.citation['excerpt']}])
+        visual=validate_presentation(self.raw,[self.citation])['visual']
+        self.assertEqual(visual['edges'][0]['target'],'n2')
+        for field,value in [('source_id','future-source'),('quote','A later topic absent from the allowed evidence.')]:
+            edge=self.raw['edges'][0].copy();self.raw['edges'][0][field]=value
+            with self.assertRaises(ValueError):validate_presentation(self.raw,[self.citation])
+            self.raw['edges'][0]=edge
+
+    async def test_blank_or_punctuation_evidence_cannot_bypass_quote_validation(self):
+        for quote in ['        ', '........']:
+            self.raw['nodes'][0]['quote']=quote
+            with self.assertRaises(ValueError):validate_presentation(self.raw,[self.citation])
+
+    async def test_bad_connections_and_disconnected_nodes_are_rejected(self):
+        self.raw.update(kind='tree',summary='Two concepts',edges=[{
+            'source':'n1','target':'n2','label':'Includes','source_id':'s1','quote':self.citation['excerpt']}])
+        for target in ['unknown','n1']:
+            self.raw['edges'][0]['target']=target
+            with self.assertRaises(ValueError):validate_presentation(self.raw,[self.citation])
+        self.raw['edges'][0]['target']='n2'
+        self.raw['nodes'].append({**self.raw['nodes'][0],'id':'disconnected'})
+        with self.assertRaises(ValueError):validate_presentation(self.raw,[self.citation])
+
+    async def test_twelve_nodes_allowed_but_thirteen_rejected(self):
+        self.raw['nodes']=[{**self.raw['nodes'][0],'id':f'n{i}'} for i in range(12)]
+        self.assertEqual(len(validate_presentation(self.raw,[self.citation])['visual']['nodes']),12)
+        self.raw['nodes'].append({**self.raw['nodes'][0],'id':'n12'})
+        with self.assertRaises(ValueError):validate_presentation(self.raw,[self.citation])
+
     async def test_cannot_read_another_learners_course(self):
         other = ScopedStore(self.base,Identity('22222222-2222-4222-8222-222222222222','other@example.test'))
         with self.assertRaises(HTTPException) as ctx: await self.endpoint(self.payload(),other)

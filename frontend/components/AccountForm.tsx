@@ -65,7 +65,7 @@ function Form({
     <main className="auth-shell">
       <header className="topbar">
         <a href="/" className="brand">
-          <span className="brand-mark" aria-hidden="true">L</span>
+          <span className="brand-mark" aria-hidden="true">{"L"}</span>
           <span>
             {"learnflow"}<span className="brand-dot">.</span>
           </span>

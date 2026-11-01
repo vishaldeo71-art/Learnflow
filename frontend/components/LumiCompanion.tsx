@@ -6,6 +6,7 @@ import { api } from "../lib/api";
 import { demoAnswer, progressTotals, speechText, voiceCommand, type CompanionAnswer, type Gesture, type StudyOverview } from "../lib/companion";
 import LumiAvatar from "./LumiAvatar";
 import ConceptBoard from "./ConceptBoard";
+import { diagramSamples } from "../lib/diagram-samples";
 import EvidenceSources from "./EvidenceSources";
 
 type Recognition = {
@@ -147,7 +148,13 @@ export default function LumiCompanion({courseId, courseTitle, videoSeconds = 0, 
       setNotice(errorText(error,"Could not get an answer.")); setGesture("encourage");
     } finally {if (version === requestId.current && alive.current) setBusy(false);}
   }
-  function showSample() {stopAudio(); setNotice(""); setResult(demoAnswer); setGesture("explain"); setTab("visual");}
+  function showSample() {
+    const visual=diagramSamples(t)[2];
+    stopAudio(); setNotice(""); setResult({...demoAnswer,answer:visual.summary!,visual,citations:[{
+      label:t("Authored sample · not live AI"),resource_name:t("Authored sample · not live AI"),
+      source_type:"text",seek_seconds:null,excerpt:visual.nodes[0].quote,
+    }]}); setGesture("explain"); setTab("visual");
+  }
   const totals = overview ? progressTotals(overview) : null;
   const state = listening ? "listen" : busy ? "think" : gesture;
   const stateLabel = listening ? "Listening…" : busy ? "Thinking…" : speaking ? "Speaking…" : "Ready to learn";
@@ -157,7 +164,7 @@ export default function LumiCompanion({courseId, courseTitle, videoSeconds = 0, 
       <header className="lumi-panel-header"><div><span className="lumi-online"/><strong>{t("Lumi")}</strong><span className="lumi-header-sub">{t("Your learning companion")}</span></div>{demo ? <a href="/login" className="lumi-text-button">{t("Sign in")}{" ↗"}</a> : <button ref={closeButton} type="button" className="lumi-close" aria-label={t("Close companion")} onClick={close}>{"×"}</button>}</header>
       <div className="lumi-panel-scroll">
         <div className="lumi-welcome"><div className="lumi-avatar-stage"><div className="lumi-orbit"/><LumiAvatar gesture={state} speaking={speaking}/></div><div><span className={`lumi-state lumi-state-${state}`} role="status">{t(stateLabel)}</span><h2>{t("A little company. A clearer concept.")}</h2><p>{demo ? t("An interactive preview. Your private courses stay private.") : courseTitle || t("Choose a lesson and add its material first.")}</p></div></div>
-        <nav className="lumi-tabs" aria-label={t("Companion tools")}>{(["ask","progress","visual"] as const).map(value => <button key={value} type="button" aria-pressed={tab === value} onClick={() => setTab(value)}>{t(value === "ask" ? "Ask Lumi" : value === "progress" ? "My progress" : "3D board")}</button>)}</nav>
+        <nav className="lumi-tabs" aria-label={t("Companion tools")}>{(["ask","progress","visual"] as const).map(value => <button key={value} type="button" aria-pressed={tab === value} onClick={() => setTab(value)}>{t(value === "ask" ? "Ask Lumi" : value === "progress" ? "My progress" : "Diagram board")}</button>)}</nav>
         {notice && <p className="lumi-notice" role="status">{t(notice)}</p>}
         {tab === "progress" ? <section className="lumi-progress">
           <h3>{t("Small steps, real progress.")}</h3>
@@ -168,9 +175,9 @@ export default function LumiCompanion({courseId, courseTitle, videoSeconds = 0, 
             <div className="lumi-actions"><button type="button" onClick={() => {setGesture("celebrate");}}>{t("Celebrate a study break")}{" ✧"}</button>{onQuiz && <button type="button" onClick={() => {close(); onQuiz();}}>{t("Quiz me")}{" ↗"}</button>}</div>
           </>}
         </section> : <>
-          {tab === "visual" && (result?.visual ? <ConceptBoard key={`${result.session_id}-${result.visual.title}`} visual={result.visual}/> : <div className="lumi-empty-board"><span>{"◈"}</span><h3>{t("Make an idea tangible.")}</h3><p>{t("Ask about your lesson. When evidence supports it, Lumi builds a rotatable concept map, comparison, or sequence.")}</p>{demo && <button type="button" className="button-primary" onClick={showSample}>{t("Try a sample explanation")}</button>}</div>)}
+          {tab === "visual" && (result?.visual ? <ConceptBoard key={`${result.session_id}-${result.visual.title}`} visual={result.visual} citations={result.citations} onSeek={onSeek}/> : <div className="lumi-empty-board"><span>{"◈"}</span><h3>{t("Make an idea tangible.")}</h3><p>{t("Ask about your lesson. Lumi connects supported ideas in a flowchart, concept tree, or relationship graph.")}</p>{demo && <button type="button" className="button-primary" onClick={showSample}>{t("Try a sample explanation")}</button>}</div>)}
           {tab === "ask" && !result && <div className="lumi-intro"><p>{t("Ask a doubt, unpack an idea, or revisit a weak topic. Lumi uses the same evidence as your course guide.")}</p><div className="lumi-actions">{demo ? <button type="button" onClick={showSample}>{t("Try a sample explanation")}{" ↗"}</button> : <><button type="button" disabled={busy || !courseId} onClick={() => void send("ask","Summarize what I have learned so far")}>{t("Summarize so far")}</button><button type="button" disabled={busy || !courseId} onClick={() => void send("mistakes")}>{t("Help with my mistakes")}</button></>}</div></div>}
-          {result && <article className="lumi-answer" aria-live="polite"><div className="lumi-answer-label"><span>{demo ? t("Authored sample · not live AI") : result.refusal_reason ? t("More evidence needed") : result.citations.length ? t("Grounded in your course") : t("Your study activity")}</span><div>{speechAvailable && <button type="button" className="lumi-text-button" onClick={() => speaking ? stopAudio() : speak(result.status ? t(result.answer) : result.answer)}>{t(speaking ? "Stop speaking" : "Read aloud")}</button>}{result.visual && tab === "ask" && <button type="button" className="lumi-text-button" onClick={() => setTab("visual")}>{t("Show 3D board")}{" ↗"}</button>}</div></div><p dir="auto">{result.status ? t(result.answer) : result.answer}</p>{result.citations.length > 0 && <EvidenceSources citations={result.citations} onSeek={onSeek} videoUrl={videoUrl}/>} {result.visual_status === "unavailable" && <small>{t("The visual could not be verified. The sourced answer is available above.")}</small>}</article>}
+          {result && <article className="lumi-answer" aria-live="polite"><div className="lumi-answer-label"><span>{demo ? t("Authored sample · not live AI") : result.refusal_reason ? t("More evidence needed") : result.citations.length ? t("Grounded in your course") : t("Your study activity")}</span><div>{speechAvailable && <button type="button" className="lumi-text-button" onClick={() => speaking ? stopAudio() : speak(result.status ? t(result.answer) : result.answer)}>{t(speaking ? "Stop speaking" : "Read aloud")}</button>}{result.visual && tab === "ask" && <button type="button" className="lumi-text-button" onClick={() => setTab("visual")}>{t("Show diagram")}{" ↗"}</button>}</div></div><p dir="auto">{result.status ? t(result.answer) : result.answer}</p>{result.citations.length > 0 && <EvidenceSources citations={result.citations} onSeek={onSeek} videoUrl={videoUrl}/>} {result.visual_status === "unavailable" && <small>{t("The visual could not be verified. The sourced answer is available above.")}</small>}</article>}
         </>}
       </div>
       <form className="lumi-composer" onSubmit={(event: FormEvent) => {event.preventDefault(); void send();}}>

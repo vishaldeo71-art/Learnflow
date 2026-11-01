@@ -1,10 +1,15 @@
 import type { Evidence } from "../components/EvidenceSources";
 
 export type Gesture = "idle" | "listen" | "think" | "explain" | "encourage" | "celebrate";
+export type VisualNode = {
+  id?: string; label: string; detail: string; source_id: string; quote: string;
+  role?: "concept" | "decision" | "example" | "outcome";
+};
 export type Visual = {
-  kind: "concept_map" | "sequence" | "comparison";
-  title: string;
-  nodes: { label: string; detail: string; source_id: string; quote: string }[];
+  kind: "flowchart" | "tree" | "graph" | "concept_map" | "sequence" | "comparison";
+  title: string; summary?: string;
+  nodes: VisualNode[];
+  edges?: {source: string; target: string; label: string; source_id: string; quote: string}[];
 };
 export type CompanionAnswer = {
   answer: string; citations: Evidence[]; session_id?: string;
@@ -39,7 +44,7 @@ export const DEMO_QUOTE = "Distance equals speed multiplied by time: d = v × t.
 export const demoAnswer: CompanionAnswer = {
   answer: "Distance is how far you travel. Multiply speed by the time spent moving: d = v × t. At 3 metres per second for 4 seconds, you travel 12 metres. A common mistake is adding speed and time; this formula multiplies them. This is an authored sample, not an answer from your private course.",
   gesture: "explain", session_id: "demo", citations: [{label: "Learnflow sample lesson", resource_name: "Learnflow sample lesson", source_type: "text", seek_seconds: null, excerpt: DEMO_QUOTE}],
-  visual: {kind: "concept_map", title: "Distance = speed × time", nodes: [
+  visual: {kind: "graph", title: "Distance = speed × time", summary: "Speed and time are the inputs. Multiply them to find the distance travelled.", edges: [{source:"n1",target:"n3",label:"Multiply",source_id:"demo",quote:DEMO_QUOTE},{source:"n2",target:"n3",label:"Multiply",source_id:"demo",quote:DEMO_QUOTE}], nodes: [
     {label: "Speed · v", detail: "3 metres per second", source_id: "demo", quote: DEMO_QUOTE},
     {label: "Time · t", detail: "4 seconds", source_id: "demo", quote: DEMO_QUOTE},
     {label: "Distance · d", detail: "3 × 4 = 12 metres", source_id: "demo", quote: DEMO_QUOTE},
