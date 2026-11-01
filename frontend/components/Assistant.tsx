@@ -968,24 +968,6 @@ function AssistantWorkspace({
                 </button>
               </form>
             </div>
-            <IntelligencePanel
-              openRequest={toolsRequest}
-              courseId={courseId}
-              videoSeconds={videoSeconds}
-              getTime={() =>
-                playerRef.current?.getCurrentTime() ?? videoSeconds
-              }
-              getPlaybackSample={() =>
-                playerRef.current?.getPlaybackSample() ?? {
-                  time: 0,
-                  playing: false,
-                }
-              }
-              responseLanguage={responseLanguage}
-              onSeek={seekTo}
-              videoUrl={videoUrl}
-              onSaved={() => setStudyRefresh((value) => value + 1)}
-            />
             <StudyPanel
               courseId={courseId}
               videoSeconds={videoSeconds}
@@ -1000,6 +982,7 @@ function AssistantWorkspace({
             />
           </div>
 
+          <div className="guide-column">
           <aside className="chat-card">
             <div className="chat-head">
               <div className="tutor-avatar">✳</div>
@@ -1285,6 +1268,25 @@ function AssistantWorkspace({
               )}
             </div>
           </aside>
+          <IntelligencePanel
+            openRequest={toolsRequest}
+            courseId={courseId}
+            videoSeconds={videoSeconds}
+            getTime={() =>
+              playerRef.current?.getCurrentTime() ?? videoSeconds
+            }
+            getPlaybackSample={() =>
+              playerRef.current?.getPlaybackSample() ?? {
+                time: 0,
+                playing: false,
+              }
+            }
+            responseLanguage={responseLanguage}
+            onSeek={seekTo}
+            videoUrl={videoUrl}
+            onSaved={() => setStudyRefresh((value) => value + 1)}
+          />
+          </div>
         </section>
       ) : (
         <section className="interview-layout">

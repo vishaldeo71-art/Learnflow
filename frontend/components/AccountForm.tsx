@@ -65,7 +65,10 @@ function Form({
     <main className="auth-shell">
       <header className="topbar">
         <a href="/" className="brand">
-          {"learnflow."}
+          <span className="brand-mark" aria-hidden="true">L</span>
+          <span>
+            {"learnflow"}<span className="brand-dot">.</span>
+          </span>
         </a>
         <div className="interface-language">
           <label htmlFor="login-language">{t("Interface language")}</label>
@@ -85,7 +88,7 @@ function Form({
       </header>
       <section className="auth-layout">
         <div className="auth-intro">
-          <p className="eyebrow">{t("YOUR LEARNING STUDIO")}</p>
+          <p className="eyebrow auth-studio-label">{t("YOUR LEARNING STUDIO")}</p>
           <h1>{t("Turn understanding into lasting progress.")}</h1>
           <p>
             {t(
